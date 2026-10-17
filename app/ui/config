@@ -1,7 +1,7 @@
 {
   ".url": {
     "FanControlServer.main": {
-      "title": "Fan Control Server（定制版）",
+      "title": "Fan Control Server",
       "desc": "Fan Control Server（定制版） — NAS 智能风扇与温度管理",
       "icon": "images/icon_{0}.png",
       "type": "iframe",
