@@ -138,17 +138,7 @@ jobs:
 
           for i in 1 2 3; do
 
-            TAG=$(curl -fsSL --max-time 30 \
-
-              -H "Accept: application/vnd.github+json" \
-
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-
-              -H "User-Agent: FanControlServer" \
-
-              "https://api.github.com/repos/${UPSTREAM_OWNER}/${UPSTREAM_REPO}/releases/latest" \
-
-              | jq -r '.tag_name // empty' 2>/dev/null) && break
+            TAG=$(curl -fsSL --max-time 30 -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "User-Agent: FanControlServer" "https://api.github.com/repos/${UPSTREAM_OWNER}/${UPSTREAM_REPO}/releases/latest" | jq -r '.tag_name // empty' 2>/dev/null) && break
 
             echo "上游版本查询失败（第 ${i} 次），5 秒后重试"
 
