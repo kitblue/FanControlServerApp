@@ -126,6 +126,7 @@ type Telemetry struct {
 	MemUsage       float64         `json:"mem_usage"`
 	MemTotal       *float64        `json:"mem_total,omitempty"`
 	GPUTemp        *float64        `json:"gpu_temp,omitempty"`
+	GPUUsage       *float64        `json:"gpu_usage,omitempty"`
 	GPUSensorLabel string          `json:"gpu_sensor_label,omitempty"`
 	Uptime         int64           `json:"uptime"`
 	Disks          DiskPayload     `json:"disks"`

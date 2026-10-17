@@ -4,6 +4,9 @@ LOG_FILE="${TRIM_PKGVAR}/logs/script.log"
 PID_FILE="${TRIM_PKGVAR}/run/app.pid"
 SERVER_BIN="${TRIM_APPDEST}/server/fancontrolserver"
 
+# qnap8528 驱动管理
+. "$(dirname "$0")/service-setup"
+
 # 确保日志目录存在
 mkdir -p "$(dirname "$LOG_FILE")"
 # 确保运行时状态目录存在
@@ -110,10 +113,13 @@ status() {
 
 case "$1" in
 start)
+    # 先确保 qnap8528 驱动加载，再启动应用
+    service_start || exit 1
     start_process
     ;;
 stop)
     stop_process
+    service_stop || true
     ;;
 status)
     if status; then

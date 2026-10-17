@@ -1,4 +1,4 @@
-import "iconify-icon";
+﻿import "iconify-icon";
 import "./style.css";
 import * as echarts from "echarts";
 import {
@@ -457,8 +457,9 @@ function applyTelemetry(t: Telemetry) {
     updateRingProgress("cpu-ring", t.cpu_usage);
     $("cpu-ring-text").textContent = `${t.cpu_usage.toFixed(0)}%`;
     $("gpu-temp-text").textContent = formatTemp(t.gpu_temp);
-    updateRingProgress("gpu-ring", 0);
-    $("gpu-ring-text").textContent = "--%";
+    const gpuUsage = t.gpu_usage != null ? t.gpu_usage : 0;
+    updateRingProgress("gpu-ring", Math.max(0, Math.min(100, gpuUsage)));
+    $("gpu-ring-text").textContent = t.gpu_usage != null ? `${t.gpu_usage.toFixed(0)}%` : "--%";
     updateRingProgress("mem-ring", t.mem_usage);
     $("mem-ring-text").textContent = `${t.mem_usage.toFixed(0)}%`;
     if (t.mem_total && t.mem_total > 0) {
@@ -527,7 +528,7 @@ function renderStorageList() {
 }
 
 function runtimeFor(id: string) {
-    return telemetry?.fans.find(f => f.id === id);
+    return telemetry?.fans?.find(f => f.id === id);
 }
 
 /** PWM 0–255 → 转速旁显示的百分比 */
@@ -629,7 +630,7 @@ function renderFanCards() {
             const pwmVal = fan.manual_pwm;
             const pwmPct = fanPWMPercent(rt?.pwm ?? (manual ? fan.manual_pwm : undefined));
             return `
-<div class="bg-slate-900/40 rounded-2xl p-4 border border-slate-700/50" data-fan-idx="${idx}" data-fan-id="${esc(fan.id)}">
+<div class="bg-slate-900 rounded-xl p-4 border border-slate-700/60" data-fan-idx="${idx}" data-fan-id="${esc(fan.id)}">
   <div class="flex justify-between items-start mb-3">
     <div class="flex items-center gap-2.5 min-w-0">
       <div data-fan-icon-bg class="w-9 h-9 rounded-full ${stopped ? "bg-slate-700" : "bg-sky-500/10"} flex items-center justify-center flex-shrink-0">
@@ -2855,13 +2856,6 @@ async function main() {
             refreshIcon.classList.remove("animate-spin");
             refreshBtn.disabled = false;
         }
-    });
-
-    const donateDialog = $("donate-dialog") as HTMLDialogElement;
-    $("btn-donate").addEventListener("click", () => donateDialog.showModal());
-    $("donate-close").addEventListener("click", () => donateDialog.close());
-    donateDialog.addEventListener("click", e => {
-        if (e.target === donateDialog) donateDialog.close();
     });
 
     document.getElementById("curve-point-edit-form")?.addEventListener("submit", ev => {

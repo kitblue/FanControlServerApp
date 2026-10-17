@@ -1,105 +1,104 @@
-# FanControlServer
+# FanTune — NAS 智能风扇与温度管理（FanControlServer 定制分支）
 
-飞牛私有云（fnOS）智能风扇与温度管理工具。
+![logo](logo.png)
 
-## 界面预览
+<b>FanTune</b> 是基于开源项目 <a href="https://github.com/guan-ry/FanControlServerApp" target="_blank">FanControlServer</a>（guan-ry/FanControlServerApp）品牌定制的智能风扇与温度管理工具，专为飞牛私有云及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。商店中的 FanTune 与官方版 Fan Control Server 名称明确区分、可并存安装、互不冲突。
 
-<a href="./docs/images/screenshot1.png"><img src="./docs/images/screenshot1.png" width="500"></a>
-<a href="./docs/images/screenshot2.png"><img src="./docs/images/screenshot2.png" width="500"></a>
-<br>
-<a href="./docs/images/screenshot3.png"><img src="./docs/images/screenshot3.png" width="500"></a>
-<a href="./docs/images/screenshot4.png"><img src="./docs/images/screenshot4.png" width="500"></a>
+<b>与官方版的差异：</b>
+
+- <b>驱动</b>：官方版仅依赖内核通用驱动；FanTune 额外内置 IT8528 EC 机型专用 <a href="https://github.com/iamiao/8528" target="_blank">qnap8528 驱动</a>，安装/升级时自动编译加载，支持风扇控制、温度传感器、LED、按键和 VPD 读取（IT87/NCT6775 等通用 Super I/O 芯片由 fnOS 内置驱动直接支持）
+
+- <b>GPU 信息</b>：官方版仅支持 NVIDIA 独显温度读取（nvidia-smi）；FanTune 支持 NVIDIA/AMD/Intel 全平台 GPU 温度与使用率，探测链 nvidia-smi → hwmon（amdgpu/radeon/i915/xe）→ sysfs gpu_busy_percent → i915 PMU 直读 → intel_gpu_top 兜底，多卡自动取负载最高
+
+- <b>硬盘温度</b>：官方版调用 smartctl 子进程；FanTune 优先 sysfs hwmon 直读 NVMe/SATA 盘温，零进程开销、不唤醒休眠硬盘（带 standby 检测），读取失败才回退 smartctl
+
+- <b>CPU 信息</b>：温度经 hwmon 传感器读取（可在设置中自定义传感器），使用率由 /proc/stat 计算，与官方版一致
+
+适配飞牛 OS（fnOS）应用中心，本仓库即 FnDepot 第三方源（仓库模式或 JSON 直链均可添加），可在商店一键安装。
+
+> README.md 为简介唯一事实来源，manifest desc 与 fnpack.json desc 由 CI 编译时自动同步。此项目由AI辅助完成。
+
+## 与官方版的差异（FanTune vs Fan Control Server）
+
+| 能力 | 官方版 FanControlServer | FanTune（本分支） |
+|---|---|---|
+| 名称 | Fan Control Server | **FanTune**（商店/桌面入口均不同，安装后互不冲突） |
+| 驱动 | 仅依赖内核通用驱动（IT87/NCT6775 等由 fnOS 提供） | 同左 + 内置 **qnap8528 驱动**（IT8528 EC 机型安装/升级时自动编译加载，支持风扇控制、温度传感器、LED、按键、VPD 读取） |
+| GPU 温度 | 仅 NVIDIA：`nvidia-smi --query-gpu=temperature.gpu` | NVIDIA/AMD/Intel 全覆盖：`nvidia-smi` → hwmon 独显（amdgpu/radeon/arc）→ hwmon 核显（i915/xe）→ 通用 gpu/drm 兜底 |
+| GPU 使用率 | **不支持** | `nvidia-smi`（多卡取最大）→ sysfs `gpu_busy_percent` → i915 PMU 直读（perf_event_open，零阻塞）→ `intel_gpu_top` 后台监视兜底 |
+| 硬盘温度 | `smartctl` 子进程读取 | 优先 sysfs hwmon 直读 NVMe/SATA 盘温（零进程开销、不唤醒休眠硬盘），失败回退 `smartctl`；带 standby 休眠检测 |
+| CPU 温度 | hwmon 传感器（支持自定义传感器） | 与官方版一致 |
+| CPU 使用率 | `/proc/stat` | 与官方版一致 |
+| 版本更新检查 | GitHub API | GitHub API → releases/latest 302 → jsDelivr CDN 三级降级，规避 API 限流 |
 
 ## 功能特性
 
-**风扇控制**
-- 基于 Linux sysfs PWM 的多风扇独立控制
-- 手动 / 曲线自动两种调速模式
-- 每个风扇可独立选择温度源：CPU / GPU / 硬盘平均 / 最大值 / 指定硬盘
-- 首次运行自动扫描风扇并写入配置
-- 硬件指纹（stable_id）绑定，防止重启风扇路径变更
+- 🌬️ 风扇控制：独立设置每个风扇的智能温控曲线，手动/自动随时切换，0‑255 精确 PWM
+- 🌡️ 硬件监控：CPU/GPU/内存/硬盘温度与使用率、NVMe/SATA 温度、历史温度曲线图表
+- 🔔 安全机制：可配置过热阈值超限强制全速、停转温差防频繁启停、系统登录态 + 管理员写保护
+- 🎛️ 通用芯片支持：IT87/NCT6775 等主流 Super I/O 风扇芯片直接支持（fnOS 已内置驱动）；IT8528 EC 机型自动编译安装 qnap8528-kmod 备用驱动
+- ⚙️ 深色 Web 界面：响应式、WebSocket 实时推送，经 fnOS 网关 `/app/FanControlServer` 访问
 
-**硬件监控**
-- 实时 CPU / GPU / 内存 / 硬盘温度及使用率
-- 支持 NVMe / SATA 硬盘温度读取，区分活跃与待机状态
-- 历史温度曲线图表（ECharts）
+## 支持的 GPU
 
-**安全机制**
-- 过热保护：超过阈值自动全速
-- 停转回滞：防止临界温度频繁启停
-- 进程退出行为可选（保持当前或指定 PWM）
-- 通过飞牛统一网关完成登录认证，写操作仅管理员可执行（需 fnOS V1.1.3100+）
+- **NVIDIA 独显**：通过 `nvidia-smi` 读取温度与利用率，多卡环境自动取负载最高的一张
+- **AMD 独显**：通过内核 amdgpu 驱动读取温度（hwmon）与利用率（sysfs `gpu_busy_percent`）
+- **Intel 核显 / Arc 独显**：通过 i915/xe 驱动读取温度（hwmon）与利用率（sysfs `gpu_busy_percent`，旧核显 i915 走 PMU 直读）
 
-**其他**
-- 响应式 Web 深色界面，WebSocket 实时推送
-- 无外部 CDN 依赖，所有前端资源本地打包
+## 安装与使用（FnDepot 第三方源）
 
-[//]: # (- 默认端口 19527)
+本仓库根目录自带 FnDepot V2 规范索引 `fnpack.json`，可直接作为第三方源添加，无需独立源仓库：
 
-[//]: # (## 技术栈)
+- **仓库模式**：添加源时填入仓库地址 `https://github.com/kitblue/FanControlServerApp`（V2 客户端对仓库名不强制为 FnDepot，仓库根目录含 `fnpack.json` 与 `FanControlServer/` 应用目录即可）
+- **JSON 直链模式**（老版本即用此方式，兼容性最稳）：
+  - `https://raw.githubusercontent.com/kitblue/FanControlServerApp/main/fnpack.json`
+  - 国内加速：`https://cdn.jsdelivr.net/gh/kitblue/FanControlServerApp@main/fnpack.json`
 
-[//]: # ()
-[//]: # (- **后端**：Go + Gin + WebSocket + logrus)
+添加步骤：
 
-[//]: # (- **前端**：Vite + TypeScript + Tailwind CSS + ECharts)
+1. 在飞牛 OS 应用中心 → 第三方商店 → 添加源，填入上述任一地址
+2. 同步后搜到 **FanTune** → 安装（内置 qnap8528 驱动，自动编译加载）
+3. 首次启动会自动安装 IT8528 内核驱动（需联网编译）
+4. 浏览器访问 `http://<NAS IP>:5666/app/FanControlServer`（或从 fnOS 应用中心点击图标进入）
+5. 在「设置」页配置温控曲线与安全阈值，开启自动控制
 
-[//]: # (- **数据来源**：hwmon sysfs、smartctl、hdparm、nvidia-smi)
+> 注意：商店中的 **FanTune**（本定制分支）与 **Fan Control Server**（官方版）是两个可并存的独立应用，安装互不影响。
 
-## 构建
+## 项目结构
 
-需要 Go 1.24+ 和 Node.js 18+。
+```
+├── backend/            # Go 后端：温度/风扇采集、GPU 探测（含 qnap8528 驱动加载）、WebSocket 推送
+│   └── internal/driver/  # gpu.go（NVIDIA/AMD/Intel 探测链）、smartctl.go（sysfs 直读盘温）
+├── frontend/           # Vite + TypeScript 前端（构建产物进入 backend/web）
+├── app/qnap8528-src/   # IT8528 EC 内核驱动源码（DKMS，安装时自动编译）
+├── scripts/            # 构建、简介同步、FnDepot 源生成脚本
+├── .github/workflows/  # CI：发版同步 fnpack.json + FanControlServer/ 应用目录
+├── manifest            # fnOS 应用清单（desc 由 CI 从 README 自动同步）
+├── FanControlServer/   # FnDepot 应用目录（icon.png / Preview / README.md）
+├── fnpack.json         # FnDepot 索引（desc 由 CI 从 README 自动同步）
+└── README.md           # 项目简介唯一事实来源
+```
+
+## 本地构建
 
 ```bash
-# Linux / macOS
-./scripts/build.sh
-
-# Windows PowerShell
-.\scripts\build.ps1
+# 前端
+cd frontend && npm install && npm run build
+# 后端（Linux amd64）
+cd backend && GOOS=linux GOARCH=amd64 go build -o ../app/server/fancontrolserver .
+# 打包 FPK（需安装 fnpack）
+fnpack build
+# 生成 FnDepot 源内容（可选，本地预览）
+python scripts/gen_fndepot.py
 ```
 
-脚本自动完成：前端编译 → Go 交叉编译（内嵌前端）→ fnpack 打包。
+## 发布流程
 
-产物：`dist/*.fpk`
+每次 CI 运行会自动完成：从上游检查版本并递增 → 构建前端与后端 → 从 README.md 提取简介同步进 manifest 与 fnpack.json → 构建 FPK 并上传 Release（正文取 CHANGELOG.md）→ 运行 `scripts/gen_fndepot.py` 刷新 `FanControlServer/` 应用目录与 fnpack.json 图标相对路径 → 提交更新。修改 README.md 简介或 CHANGELOG.md 更新日志后触发 CI 即可全渠道同步，无需手动改各文件。
 
-[//]: # (## 安装)
+## 致谢与许可
 
-[//]: # ()
-[//]: # (```bash)
-
-[//]: # (appcenter-cli install-fpk dist/FanControlServer.fpk)
-
-[//]: # (```)
-
-[//]: # ()
-[//]: # (安装后通过飞牛系统菜单 `/app/FanControlServer` 访问，登录认证由统一网关统一处理。)
-
-## 目录结构
-
-```
-├── backend/          # Go 后端源码（go:embed 内嵌前端）
-├── frontend/         # 前端源码（Vite + TS + Tailwind）
-├── scripts/          # 构建脚本（build.sh / build.ps1）
-├── app/              # 飞牛应用目录（server/ 为编译产物，ui/ 为桌面入口）
-├── cmd/              # 飞牛生命周期脚本（启停、安装、卸载等）
-├── config/           # 飞牛权限 / 资源配置
-├── wizard/           # 飞牛安装 / 配置 / 卸载向导
-└── manifest          # 飞牛应用元数据
-```
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=guan-ry%2FFanControlServerApp&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=guan-ry/FanControlServerApp&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=guan-ry/FanControlServerApp&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=guan-ry/FanControlServerApp&type=date&legend=top-left" />
- </picture>
-</a>
-
-## 支持项目
-
-如果你觉得这个项目有用，欢迎请作者喝杯咖啡 ☕️
-
-<a href="./docs/images/donate-qrcode.png">
-    <img src="./docs/images/donate-qrcode.png" width="360" alt="打赏二维码" />
-</a>
+- 基于 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 定制（上游开源项目，fork 自 guan-ry/FanControlServerApp）
+- IT8528 内核驱动来自 [iamiao/8528](https://github.com/iamiao/8528)
+- GPU 识别思路参考 [fan2go](https://github.com/markusressel/fan2go)（作者 markusressel，许可证 AGPL-3.0）
+- 本项目为个人维护的第三方开源应用，与 QNAP 官方无关

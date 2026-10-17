@@ -1,5 +1,7 @@
 #!/bin/bash
 
-### This script is called after the user installs the application.
+### 安装后回调：后台编译并安装 qnap8528 驱动（静默执行，无 UI）
 
-exit 0
+. "$(dirname "$0")/service-setup"
+service_postinst
+exit $?

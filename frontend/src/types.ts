@@ -126,6 +126,7 @@ export interface Telemetry {
     mem_usage: number;
     mem_total?: number;  // 内存总量（GB）
     gpu_temp?: number;
+    gpu_usage?: number;
     cpu_sensor_label?: string;
     gpu_sensor_label?: string;
     disks: {

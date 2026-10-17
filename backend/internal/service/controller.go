@@ -126,7 +126,15 @@ func (c *Controller) QueryHistory(rangeParam, fromParam, toParam string) (model.
 func (c *Controller) Telemetry() model.Telemetry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.telemetry
+	t := c.telemetry
+	// 零值兜底：零值 Fans/Sensors 会被序列化为 null，改为非空空数组
+	if t.Fans == nil {
+		t.Fans = []model.FanRuntime{}
+	}
+	if t.Sensors == nil {
+		t.Sensors = []model.SensorReading{}
+	}
+	return t
 }
 
 func (c *Controller) Subscribe() chan model.Telemetry {
@@ -189,6 +197,7 @@ func (c *Controller) collectAndApply(cfg model.Config) model.Telemetry {
 	cpuUsage, _ := c.system.CPUUsage()
 	memUsage, memTotal, _ := c.system.MemInfo()
 	gpuTemp := c.readGPUTemp(cfg.Global)
+	gpuUsage, _ := c.gpu.Usage()
 	logrus.Debugf("[温度] CPU=%.1f°C GPU=%.1f°C", ptrOrNil(cpuTemp), ptrOrNil(gpuTemp))
 
 	// 计算系统运行时间（秒）
@@ -239,6 +248,7 @@ func (c *Controller) collectAndApply(cfg model.Config) model.Telemetry {
 		MemUsage:       round(memUsage),
 		MemTotal:       memTotal,
 		GPUTemp:        gpuTemp,
+		GPUUsage:       gpuUsage,
 		CPUSensorLabel: cpuSensorLabel,
 		GPUSensorLabel: gpuSensorLabel,
 		Uptime:         uptime,

@@ -1,5 +1,7 @@
 #!/bin/bash
 
-### This script is called after the user upgrades the application.
+### 升级后回调：重新编译安装 qnap8528 驱动
 
-exit 0
+. "$(dirname "$0")/service-setup"
+service_postinst
+exit $?

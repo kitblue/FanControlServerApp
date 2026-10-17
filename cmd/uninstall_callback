@@ -3,6 +3,10 @@
 set -e          # 遇到错误立即退出
 set -u          # 使用未定义变量时报错
 
+# 卸载 qnap8528 驱动（随应用一起卸载）
+. "$(dirname "$0")/service-setup"
+service_postuninst || true
+
 # 安全删除函数
 safe_delete() {
     local dir_path="$1"

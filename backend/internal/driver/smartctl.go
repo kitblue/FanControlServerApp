@@ -63,18 +63,18 @@ func (d *SmartCtlDriver) ReadDisk(name string) model.DiskInfo {
 	isNVMe := strings.HasPrefix(name, "nvme")
 	device := "/dev/" + name
 
-	// 先检查是否休眠（不会唤醒硬盘）
-	isSleep := d.checkStandby(device)
+	// 先检查是否休眠（sysfs 直读，不唤醒硬盘；读不到才 fallback hdparm）
+	isSleep := d.checkStandby(name, device)
 	if isSleep {
 		return model.DiskInfo{Name: name, Serial: serial, Status: model.DiskStatusSleep}
 	}
 
-	// 只有非休眠状态才读取温度（可能轻微唤醒，但硬盘本来就是活跃的）
+	// 只有非休眠状态才读取温度（sysfs hwmon 直读优先，无进程创建开销）
 	var temp *float64
 	if isNVMe {
-		temp = d.readNVMeTemp(device)
+		temp = d.readNVMeTemp(name, device)
 	} else {
-		temp, serial = d.readSATAInfo(device, serial)
+		temp, serial = d.readSATAInfo(name, device, serial)
 		if serial != "" {
 			d.cacheSerial(name, serial)
 		}
@@ -217,9 +217,15 @@ func parseSerialFromDiskID(idName string) string {
 	return ""
 }
 
-// checkStandby 使用 hdparm -C 检查硬盘是否休眠
-// 输出 standby 表示休眠，active/idle 表示活动
-func (d *SmartCtlDriver) checkStandby(dev string) bool {
+// checkStandby 优先从 sysfs 直读电源状态（/sys/block/<dev>/device/state），
+// 不创建外部进程、不唤醒硬盘；sysfs 无该节点时 fallback 到 hdparm -C。
+// state 取值为 running / standby / sleeping 等（SCSI/SATA）。
+func (d *SmartCtlDriver) checkStandby(name, dev string) bool {
+	if s := readTrimmedFile(filepath.Join("/sys/block", name, "device", "state")); s != "" {
+		low := strings.ToLower(s)
+		return strings.Contains(low, "standby") || strings.Contains(low, "sleep")
+	}
+	// fallback：hdparm -C，输出 standby 表示休眠，active/idle 表示活动
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "hdparm", "-C", dev)
@@ -230,7 +236,12 @@ func (d *SmartCtlDriver) checkStandby(dev string) bool {
 	return strings.Contains(strings.ToLower(string(out)), "standby")
 }
 
-func (d *SmartCtlDriver) readSATAInfo(dev, knownSerial string) (*float64, string) {
+// readSATAInfo 优先 sysfs hwmon 直读 SATA/SAS 盘温（零进程开销），
+// 失败时 fallback 到 smartctl -a（保留序列号兜底解析）。
+func (d *SmartCtlDriver) readSATAInfo(name, dev, knownSerial string) (*float64, string) {
+	if temp := readDiskTempFromSysfs(name); temp != nil {
+		return temp, knownSerial
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "smartctl", "-a", dev)
@@ -245,15 +256,12 @@ func (d *SmartCtlDriver) readSATAInfo(dev, knownSerial string) (*float64, string
 	return parseSATATemperature(out), serial
 }
 
-func parseSATASerial(out []byte) string {
-	fields := reSATASerial.FindSubmatch(out)
-	if len(fields) == 2 {
-		return strings.TrimSpace(string(fields[1]))
+// readNVMeTemp 优先 sysfs hwmon 直读 NVMe 盘温（零进程开销），
+// 失败时 fallback 到 smartctl -a。
+func (d *SmartCtlDriver) readNVMeTemp(name, dev string) *float64 {
+	if temp := readDiskTempFromSysfs(name); temp != nil {
+		return temp
 	}
-	return ""
-}
-
-func (d *SmartCtlDriver) readNVMeTemp(dev string) *float64 {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "smartctl", "-a", dev)
@@ -262,6 +270,56 @@ func (d *SmartCtlDriver) readNVMeTemp(dev string) *float64 {
 		return nil
 	}
 	return parseNVMeTemperature(out)
+}
+
+func parseSATASerial(out []byte) string {
+	fields := reSATASerial.FindSubmatch(out)
+	if len(fields) == 2 {
+		return strings.TrimSpace(string(fields[1]))
+	}
+	return ""
+}
+
+// readDiskTempFromSysfs 从 /sys/block/<name>/device/hwmon*/temp1_input 读取盘温。
+// NVMe 与部分 SATA 控制器内核都会导出 hwmon 温度节点；值单位毫摄氏度。
+// 返回 nil 表示内核未导出该节点（调用方再走 smartctl fallback）。
+func readDiskTempFromSysfs(blockName string) *float64 {
+	hwmonDirs := []string{
+		filepath.Join("/sys/block", blockName, "device", "hwmon"),
+	}
+	// NVMe 控制器层级：/sys/class/nvme/nvme0/hwmon*
+	if strings.HasPrefix(blockName, "nvme") {
+		rest := blockName[len("nvme"):]
+		if i := strings.IndexByte(rest, 'n'); i > 0 {
+			ctrl := "nvme" + rest[:i]
+			hwmonDirs = append(hwmonDirs, filepath.Join("/sys/class/nvme", ctrl, "hwmon"))
+		}
+	}
+	for _, dir := range hwmonDirs {
+		subs, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, sub := range subs {
+			if !strings.HasPrefix(sub.Name(), "hwmon") {
+				continue
+			}
+			tempPath := filepath.Join(dir, sub.Name(), "temp1_input")
+			data, err := os.ReadFile(tempPath)
+			if err != nil {
+				continue
+			}
+			milli, err := strconv.Atoi(strings.TrimSpace(string(data)))
+			if err != nil || milli <= 0 {
+				continue
+			}
+			v := float64(milli) / 1000.0
+			if v > 0 && v < 150 {
+				return &v
+			}
+		}
+	}
+	return nil
 }
 
 // parseSATATemperature 从 smartctl -a 输出中提取 SATA/SAS 磁盘温度。

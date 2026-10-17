@@ -1,15 +1,21 @@
 {
-    ".url": {
-        "FanControlServer.Application": {
-            "title": "Fan Control Server",
-            "desc": "智能风扇与温度管理",
-            "icon": "images/icon_{0}.png",
-            "type": "url",
-            "protocol": "",
-            "gatewaySocket": "target/app.sock",
-            "gatewayPrefix": "/app/FanControlServer",
-            "url": "/app/FanControlServer",
-            "allUsers": false
-        }
+  ".url": {
+    "FanControlServer.main": {
+      "title": "FanTune",
+      "desc": "FanTune — NAS 智能风扇与温度管理",
+      "icon": "images/icon_{0}.png",
+      "type": "iframe",
+      "protocol": "",
+      "gatewayPrefix": "/app/FanControlServer",
+      "gatewaySocket": "target/app.sock",
+      "url": "/app/FanControlServer",
+      "allUsers": false,
+      "control": {
+        "auth": 2,
+        "port": 2,
+        "path": 2,
+        "fullUrl": 2
+      }
     }
+  }
 }
