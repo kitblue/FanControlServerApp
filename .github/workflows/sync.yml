@@ -288,11 +288,7 @@ jobs:
 
           go mod tidy
 
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
-
-            -ldflags "-s -w -X fancontrolserver/internal/version.Version=${APP_VERSION}" \
-
-            -o ../app/server/fancontrolserver .
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X fancontrolserver/internal/version.Version=${APP_VERSION}" -o ../app/server/fancontrolserver .
 
 
 
