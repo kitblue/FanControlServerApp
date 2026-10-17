@@ -2,18 +2,9 @@
 
 ![logo](ICON.PNG)
 
-**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。与官方版名称明确区分，可并存安装、互不冲突。
-
-**相对官方版的核心增强：**
-
-- **驱动**：内置 IT8528 EC 专用 [qnap8528 驱动](https://github.com/iamiao/8528)，安装/升级时自动编译加载；IT87/NCT6775 等通用芯片由 fnOS 内置驱动直接支持
-- **GPU**：NVIDIA/AMD/Intel 全平台温度与使用率，多卡自动取负载最高
-- **硬盘温度**：优先 sysfs hwmon 直读 NVMe/SATA 盘温，零进程开销、不唤醒休眠硬盘，失败才回退 smartctl
-- **CPU**：温度经 hwmon 传感器读取（可自定义），使用率由 /proc/stat 计算
+**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控。与官方版名称区分，可并存安装、互不冲突。
 
 适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。
-
-> README.md 为简介唯一事实来源，manifest desc 与 fnpack.json desc 由 CI 编译时自动同步。
 
 
 ## 与官方版的差异（本定制版 vs 官方版）
