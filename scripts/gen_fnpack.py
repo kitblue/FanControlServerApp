@@ -76,7 +76,7 @@ DIST = ROOT / "dist"
 
 APP_VERSION = os.environ.get("APP_VERSION", "1.3.7.37")
 
-APP_ASSET = os.environ.get("APP_ASSET", f"FanControlServer-v{APP_VERSION}-linux-amd64-iframe.fpk")
+APP_ASSET = os.environ.get("APP_ASSET", f"fancontrolserver-v{APP_VERSION}-linux-amd64-iframe.fpk")
 
 
 
@@ -266,6 +266,7 @@ def main():
 
     entry = {
 
+        "appname": "fancontrolserver",
         "display_name": manifest.get("display_name", "FanControlServer"),
 
         "desc": manifest.get("desc", ""),
@@ -348,7 +349,7 @@ def main():
 
         "apps": {
 
-            "FanControlServer": entry,
+            "fancontrolserver": entry,
 
         },
 
