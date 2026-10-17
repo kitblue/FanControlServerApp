@@ -9,29 +9,16 @@
 
 ## 与官方版的差异（本定制版 vs 官方版）
 
-
-
-| 能力 | 官方版 Fan Control Server | 本定制版（本分支） |
-
+| 能力 | 官方版 | 本定制版 |
 |---|---|---|
-
-| 名称 | Fan Control Server | **Fan Control Server（定制版）**（商店/桌面入口均不同，安装后互不冲突） |
-
-| 驱动 | 仅依赖内核通用驱动（IT87/NCT6775 等由 fnOS 提供） | 同左 + 内置 **qnap8528 驱动**（IT8528 EC 机型安装/升级时自动编译加载，支持风扇控制、温度传感器、LED、按键、VPD 读取） |
-
-| GPU 温度 | 仅 NVIDIA：`nvidia-smi --query-gpu=temperature.gpu` | NVIDIA/AMD/Intel 全覆盖：`nvidia-smi` → hwmon 独显（amdgpu/radeon/arc）→ hwmon 核显（i915/xe）→ 通用 gpu/drm 兜底 |
-
-| GPU 使用率 | **不支持** | `nvidia-smi`（多卡取最大）→ sysfs `gpu_busy_percent` → i915 PMU 直读（perf_event_open，零阻塞）→ `intel_gpu_top` 后台监视兜底 |
-
-| 硬盘温度 | `smartctl` 子进程读取 | 优先 sysfs hwmon 直读 NVMe/SATA 盘温（零进程开销、不唤醒休眠硬盘），失败回退 `smartctl`；带 standby 休眠检测 |
-
-| CPU 温度 | hwmon 传感器（支持自定义传感器） | 与官方版一致 |
-
-| CPU 使用率 | `/proc/stat` | 与官方版一致 |
-
-| 版本更新检查 | GitHub API | GitHub API → releases/latest 302 → jsDelivr CDN 三级降级，规避 API 限流 |
-
-
+| 名称 | Fan Control Server | **Fan Control Server（定制版）**：商店/桌面入口不同，可并存安装 |
+| 驱动 | 仅内核通用驱动（IT87/NCT6775，由 fnOS 提供） | 同左 + 内置 **qnap8528 驱动**（IT8528 EC 机型安装/升级自动编译加载） |
+| GPU 温度 | 仅 NVIDIA（nvidia-smi） | NVIDIA / AMD / Intel 全覆盖：nvidia-smi → hwmon 独显 → hwmon 核显 → gpu/drm 兜底 |
+| GPU 使用率 | 不支持 | nvidia-smi（多卡取最大）→ sysfs gpu_busy_percent → i915 PMU 直读 → intel_gpu_top 兜底 |
+| 硬盘温度 | smartctl 子进程读取 | 优先 sysfs hwmon 直读（零进程开销、不唤醒休眠盘），失败回退 smartctl |
+| CPU 温度 | hwmon 传感器（可自定义） | 与官方版一致 |
+| CPU 使用率 | /proc/stat | 与官方版一致 |
+| 版本更新检查 | GitHub API | GitHub API → releases/latest 302 → jsDelivr CDN 三级降级，规避限流 |
 
 ## 功能特性
 
