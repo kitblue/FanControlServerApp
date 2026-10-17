@@ -505,12 +505,21 @@ var (
 )
 
 // tempFromHwmon 扫描 hwmon 温度通道，按给定关键词识别 GPU 相关芯片并读取第一个有效温度。
+// 通道列表缓存 60 秒，避免每轮采集重复 Glob 扫描。
 func (d *GPUDriver) tempFromHwmon(keywords []string) (*float64, error) {
 	hw := NewHWMONDriver()
-	chans, err := hw.ScanTempChannels()
-	if err != nil {
-		return nil, err
+	d.mu.Lock()
+	if time.Since(d.hwmonScannedAt) > time.Minute || d.hwmonChans == nil {
+		if chans, err := hw.ScanTempChannels(); err == nil {
+			d.hwmonChans = chans
+			d.hwmonScannedAt = time.Now()
+		} else {
+			d.mu.Unlock()
+			return nil, err
+		}
 	}
+	chans := d.hwmonChans
+	d.mu.Unlock()
 	for _, ch := range chans {
 		if !isGPUChannel(ch.Chip, ch.Label, ch.Device, keywords) {
 			continue

@@ -152,10 +152,12 @@ func abortWithError(c *gin.Context, status int, err error) bool {
 }
 
 func (h *handler) deviceInfo(c *gin.Context) {
+	h.controller.MarkViewerActive()
 	c.JSON(http.StatusOK, h.controller.Telemetry())
 }
 
 func (h *handler) deviceHistory(c *gin.Context) {
+	h.controller.MarkViewerActive()
 	series, err := h.controller.QueryHistory(c.Query("range"), c.Query("from"), c.Query("to"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -165,6 +167,7 @@ func (h *handler) deviceHistory(c *gin.Context) {
 }
 
 func (h *handler) deviceScan(c *gin.Context) {
+	h.controller.MarkViewerActive()
 	fans, err := h.controller.ScanFans()
 	if abortWithError(c, http.StatusInternalServerError, err) {
 		return
@@ -285,10 +288,13 @@ func (h *handler) ws(c *gin.Context) {
 		logrus.Infof("[WebSocket] 客户端已断开：%s", clientIP)
 	}()
 
+	// WS 连接视为 UI 查看者，持续刷新活跃窗口，避免长连接期间误进后台模式
+	h.controller.MarkViewerActive()
 	if err = conn.WriteJSON(h.controller.Telemetry()); err != nil {
 		return
 	}
 	for msg := range sub {
+		h.controller.MarkViewerActive()
 		if err = conn.WriteJSON(msg); err != nil {
 			return
 		}

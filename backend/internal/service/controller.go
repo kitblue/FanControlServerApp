@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,11 @@ import (
 	"fancontrolserver/internal/driver"
 	"fancontrolserver/internal/model"
 )
+
+// viewerIdleTimeout UI 活跃窗口：超过该时长无任何读接口请求，即认为无人查看 UI，
+// 控制器进入后台风扇闭环模式，只跑风扇调速，跳过 CPU/GPU 使用率、内存、全量传感器、
+// 磁盘展示与历史落库等无关采集。
+const viewerIdleTimeout = 90 * time.Second
 
 type Controller struct {
 	store          *Store
@@ -127,12 +133,16 @@ func (c *Controller) Telemetry() model.Telemetry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	t := c.telemetry
-	// 零值兜底：零值 Fans/Sensors 会被序列化为 null，改为非空空数组
+	// 零值兜底：零值 Fans/Sensors 会被序列化为 null，改为非空空数组；
+	// 后台风扇闭环模式未采集磁盘时 Details 也为零值，同样兜底避免前端收到 null。
 	if t.Fans == nil {
 		t.Fans = []model.FanRuntime{}
 	}
 	if t.Sensors == nil {
 		t.Sensors = []model.SensorReading{}
+	}
+	if t.Disks.Details == nil {
+		t.Disks.Details = []model.DiskInfo{}
 	}
 	return t
 }
@@ -152,6 +162,17 @@ func (c *Controller) Unsubscribe(ch chan model.Telemetry) {
 	c.mu.Unlock()
 }
 
+// MarkViewerActive 由 API 读接口调用：表示有 UI 正在查看实时数据，刷新活跃窗口。
+// 活跃窗口覆盖前端 60 秒历史轮询间隔，避免页面挂着时误进后台模式。
+func (c *Controller) MarkViewerActive() {
+	atomic.StoreInt64(&c.viewerActiveUntil, time.Now().Add(viewerIdleTimeout).UnixNano())
+}
+
+// hasActiveViewers 判断当前是否有活跃的 UI 查看者。
+func (c *Controller) hasActiveViewers() bool {
+	return time.Now().UnixNano() < atomic.LoadInt64(&c.viewerActiveUntil)
+}
+
 func (c *Controller) loop() {
 	defer close(c.loopDoneCh)
 	timer := time.NewTimer(0)
@@ -164,8 +185,29 @@ func (c *Controller) loop() {
 		}
 
 		cfg := c.store.Get()
-		t := c.collectAndApply(cfg)
-		if c.history != nil {
+		active := c.hasActiveViewers()
+		var t model.Telemetry
+		if active {
+			// UI 查看者恢复后立即退出后台模式（下次 collectFullTelemetry 会按需重启 Intel 监视）
+			if c.backgroundMode {
+				c.mu.Lock()
+				c.backgroundMode = false
+				c.mu.Unlock()
+				logrus.Info("[控制器] UI 查看者恢复，退出后台风扇闭环模式")
+			}
+			t = c.collectFullTelemetry(cfg)
+		} else {
+			if !c.backgroundMode {
+				// 首次进入后台模式：停掉 intel_gpu_top 常驻进程，避免无 UI 时持续 fork/采集
+				c.gpu.StopIntelMonitor()
+				c.mu.Lock()
+				c.backgroundMode = true
+				c.mu.Unlock()
+				logrus.Info("[控制器] 进入后台风扇闭环模式：仅采集风扇温度源，停止无关遥测与历史落库")
+			}
+			t = c.collectFanControlOnly(cfg)
+		}
+		if c.history != nil && active {
 			c.history.RecordSnapshot(t)
 		}
 		c.mu.Lock()
@@ -189,7 +231,8 @@ func (c *Controller) loop() {
 	}
 }
 
-func (c *Controller) collectAndApply(cfg model.Config) model.Telemetry {
+// collectFullTelemetry 全量采集模式：UI 有查看者时完整采集温度/使用率/磁盘/传感器并闭环风扇。
+func (c *Controller) collectFullTelemetry(cfg model.Config) model.Telemetry {
 	now := time.Now()
 	// 先采集传感器列表，避免 readCPUTemp/readGPUTemp 重复调用 readSensors
 	sensors := c.readSensors()
@@ -211,9 +254,70 @@ func (c *Controller) collectAndApply(cfg model.Config) model.Telemetry {
 	cpuSensorLabel := resolveSensorLabel(cfg.Global.CPUSensor, sensors, "CPU")
 	gpuSensorLabel := resolveSensorLabel(cfg.Global.GPUSensor, sensors, "GPU")
 
+	fans := c.computeFans(cfg, cfg.Global, cpuTemp, gpuTemp, disks, sensors)
+
+	return model.Telemetry{
+		CPUTemp:        cpuTemp,
+		CPUUsage:       round(cpuUsage),
+		MemUsage:       round(memUsage),
+		MemTotal:       memTotal,
+		GPUTemp:        gpuTemp,
+		GPUUsage:       gpuUsage,
+		CPUSensorLabel: cpuSensorLabel,
+		GPUSensorLabel: gpuSensorLabel,
+		Uptime:         uptime,
+		Disks:          disks,
+		Fans:           fans,
+		Sensors:        sensors,
+		Timestamp:      now,
+	}
+}
+
+// collectFanControlOnly 后台风扇闭环模式：无 UI 查看者时仅采集风扇温度源所需的最小数据，
+// 跳过 CPU/GPU 使用率、内存、全量传感器、磁盘展示与历史落库。风扇闭环行为与全量模式完全一致。
+func (c *Controller) collectFanControlOnly(cfg model.Config) model.Telemetry {
+	now := time.Now()
+	global := cfg.Global
+	need := c.resolveFanTempNeeds(cfg)
+
+	var cpuTemp *float64
+	if need.cpu {
+		cpuTemp = c.readCPUTemp(global)
+	}
+	var gpuTemp *float64
+	if need.gpu {
+		gpuTemp = c.readGPUTemp(global)
+	}
+	var disks model.DiskPayload
+	if need.disk {
+		disks = c.readDisks()
+		c.maybeMigrateDiskSources(disks)
+		cfg = c.store.Get()
+	}
+	var sensors []model.SensorReading
+	if need.needAllSensors {
+		sensors = c.readSensors()
+	} else if len(need.sensorIDs) > 0 {
+		sensors = c.readSensorsSubset(need.sensorIDs)
+	}
+
+	fans := c.computeFans(cfg, global, cpuTemp, gpuTemp, disks, sensors)
+	return model.Telemetry{
+		CPUTemp:   cpuTemp,
+		GPUTemp:   gpuTemp,
+		Disks:     disks,
+		Fans:      fans,
+		Sensors:   sensors,
+		Timestamp: now,
+	}
+}
+
+// computeFans 执行所有风扇的闭环控制（按需读取 RPM），返回运行时状态。
+// 全量模式与后台风扇闭环模式共用，保证两种模式下调速行为完全一致。
+func (c *Controller) computeFans(cfg model.Config, global model.GlobalConfig, cpuTemp, gpuTemp *float64, disks model.DiskPayload, sensors []model.SensorReading) []model.FanRuntime {
 	fans := make([]model.FanRuntime, 0, len(cfg.Fans))
 	for _, fan := range cfg.Fans {
-		target, _ := c.calculateTargetPWM(fan, cfg.Global, cpuTemp, gpuTemp, disks, sensors)
+		target, _ := c.calculateTargetPWM(fan, global, cpuTemp, gpuTemp, disks, sensors)
 		var applied int
 		if target < 0 {
 			// 温度源不可用且策略为 keep_last：保持上次 PWM 不动
@@ -221,7 +325,7 @@ func (c *Controller) collectAndApply(cfg model.Config) model.Telemetry {
 				applied = v
 			}
 		} else {
-			applied = c.applyPWM(fan, target, effectivePWMDeadzone(fan, cfg.Global))
+			applied = c.applyPWM(fan, target, effectivePWMDeadzone(fan, global))
 		}
 		rpm := 0
 		if fan.RPMPath != "" {
@@ -241,26 +345,83 @@ func (c *Controller) collectAndApply(cfg model.Config) model.Telemetry {
 			TargetPWM: target,
 		})
 	}
+	return fans
+}
 
-	return model.Telemetry{
-		CPUTemp:        cpuTemp,
-		CPUUsage:       round(cpuUsage),
-		MemUsage:       round(memUsage),
-		MemTotal:       memTotal,
-		GPUTemp:        gpuTemp,
-		GPUUsage:       gpuUsage,
-		CPUSensorLabel: cpuSensorLabel,
-		GPUSensorLabel: gpuSensorLabel,
-		Uptime:         uptime,
-		Disks:          disks,
-		Fans:           fans,
-		Sensors:        sensors,
-		Timestamp:      now,
+// fanTempNeeds 后台风扇闭环模式下需要采集的温度源集合。
+type fanTempNeeds struct {
+	cpu            bool
+	gpu            bool
+	disk           bool
+	needAllSensors bool   // max 源需要全部传感器
+	sensorIDs      map[string]bool
+}
+
+// resolveFanTempNeeds 解析所有风扇（手动模式不依赖温度源，跳过）及其降级策略
+// 实际依赖的温度源，保证后台模式只采集闭环真正需要的数据。
+func (c *Controller) resolveFanTempNeeds(cfg model.Config) fanTempNeeds {
+	n := fanTempNeeds{sensorIDs: map[string]bool{}}
+	add := func(src string) {
+		switch {
+		case src == "":
+		case src == "cpu":
+			n.cpu = true
+		case src == "gpu":
+			n.gpu = true
+		case src == "disk_avg" || src == "disk_max" || strings.HasPrefix(src, "disk:"):
+			n.disk = true
+		case strings.HasPrefix(src, "sensor:"):
+			n.sensorIDs[strings.TrimPrefix(src, "sensor:")] = true
+		case src == "max":
+			n.cpu, n.gpu, n.disk, n.needAllSensors = true, true, true, true
+		case strings.HasPrefix(src, "combo_avg:") || strings.HasPrefix(src, "combo_max:"):
+			for _, k := range strings.Split(src[strings.Index(src, ":")+1:], ",") {
+				add(strings.TrimSpace(k))
+			}
+		}
 	}
+	for _, fan := range cfg.Fans {
+		if fan.Mode == model.FanModeManual {
+			continue // 手动模式不依赖温度源
+		}
+		add(fan.Source)
+		if effectiveFallbackPolicy(fan) == model.FallbackFollowOther {
+			add(fan.FallbackFollowSource)
+		}
+	}
+	return n
 }
 
 // readSensors 读取所有 hwmon 温度通道。通道列表每分钟刷新一次，避免每秒 Glob。
 func (c *Controller) readSensors() []model.SensorReading {
+	return c.readSensorsSubset(nil)
+}
+
+// readSensorsSubset 只读取指定 ID 集合的温度通道；want 为 nil 时读取全部。
+// 后台风扇闭环模式下仅采集风扇实际依赖的通道，避免无 UI 时扫描全部传感器。
+func (c *Controller) readSensorsSubset(want map[string]bool) []model.SensorReading {
+	chans := c.ensureSensorChans()
+	if want == nil {
+		out := make([]model.SensorReading, 0, len(chans))
+		for _, ch := range chans {
+			out = append(out, c.readSensorFromChan(ch))
+		}
+		return out
+	}
+	out := make([]model.SensorReading, 0, len(want))
+	for _, ch := range chans {
+		if !want[ch.ID] {
+			continue
+		}
+		out = append(out, c.readSensorFromChan(ch))
+	}
+	return out
+}
+
+// ensureSensorChans 确保 hwmon 通道列表已扫描（每分钟刷新一次），加锁返回当前缓存，
+// 供 readSensors 与 readCPUTemp/readGPUTemp 共用，消除原先的竞态与重复扫描。
+func (c *Controller) ensureSensorChans() []driver.TempChannel {
+	c.mu.Lock()
 	if time.Since(c.lastSensorScan) > time.Minute || c.sensorChans == nil {
 		if chans, err := c.hwmon.ScanTempChannels(); err == nil {
 			c.sensorChans = chans
@@ -269,27 +430,27 @@ func (c *Controller) readSensors() []model.SensorReading {
 			logrus.Debugf("[传感器] 扫描温度通道失败：%v", err)
 		}
 	}
-	out := make([]model.SensorReading, 0, len(c.sensorChans))
-	for _, ch := range c.sensorChans {
-		v, _ := c.hwmon.ReadTemp(ch.Path)
-		out = append(out, model.SensorReading{
-			ID:     ch.ID,
-			Chip:   ch.Chip,
-			Device: ch.Device,
-			Key:    ch.Key,
-			Label:  ch.Label,
-			Temp:   v,
-		})
+	chans := c.sensorChans
+	c.mu.Unlock()
+	return chans
+}
+
+func (c *Controller) readSensorFromChan(ch driver.TempChannel) model.SensorReading {
+	v, _ := c.hwmon.ReadTemp(ch.Path)
+	return model.SensorReading{
+		ID:     ch.ID,
+		Chip:   ch.Chip,
+		Device: ch.Device,
+		Key:    ch.Key,
+		Label:  ch.Label,
+		Temp:   v,
 	}
-	return out
 }
 
 // readCPUTemp 读取 CPU 温度：优先使用自定义传感器，否则使用默认逻辑。
 func (c *Controller) readCPUTemp(global model.GlobalConfig) *float64 {
 	if global.CPUSensor != "" {
-		c.mu.RLock()
-		chans := c.sensorChans // 加锁保护
-		c.mu.RUnlock()
+		chans := c.ensureSensorChans()
 		for _, ch := range chans {
 			if ch.ID == global.CPUSensor {
 				temp, err := c.hwmon.ReadTemp(ch.Path)
@@ -310,9 +471,7 @@ func (c *Controller) readCPUTemp(global model.GlobalConfig) *float64 {
 // readGPUTemp 读取 GPU 温度：优先使用自定义传感器，否则使用默认逻辑。
 func (c *Controller) readGPUTemp(global model.GlobalConfig) *float64 {
 	if global.GPUSensor != "" {
-		c.mu.RLock()
-		chans := c.sensorChans
-		c.mu.RUnlock()
+		chans := c.ensureSensorChans()
 		for _, ch := range chans {
 			if ch.ID == global.GPUSensor {
 				temp, err := c.hwmon.ReadTemp(ch.Path)
