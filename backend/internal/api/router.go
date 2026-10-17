@@ -54,7 +54,7 @@ func NewRouter(staticFS fs.FS, controller *service.Controller, store *service.St
 
 	if staticFS != nil {
 		if sub, err := fs.Sub(staticFS, "assets"); err == nil {
-			router.StaticFS("/app/FanControlServer/assets", http.FS(sub))
+			router.StaticFS("/app/fancontrolserver/assets", http.FS(sub))
 		} else {
 			logrus.Warn("assets directory not found in embedded filesystem, static assets will not be served")
 		}
@@ -65,15 +65,15 @@ func NewRouter(staticFS fs.FS, controller *service.Controller, store *service.St
 			panic("无法读取 index.html: " + err.Error())
 		}
 
-		router.GET("/app/FanControlServer/", func(c *gin.Context) {
+		router.GET("/app/fancontrolserver/", func(c *gin.Context) {
 			c.Data(http.StatusOK, "text/html; charset=utf-8", indexData)
 		})
 	}
 
-	router.GET("/app/FanControlServer/api/auth/status", h.authStatus)
+	router.GET("/app/fancontrolserver/api/auth/status", h.authStatus)
 
 	// 读接口：网关模式下所有登录用户都可访问（网关已鉴权）
-	apiRead := router.Group("/app/FanControlServer/api")
+	apiRead := router.Group("/app/fancontrolserver/api")
 	{
 		apiRead.GET("/device/info", h.deviceInfo)
 		apiRead.GET("/device/history", h.deviceHistory)
@@ -84,7 +84,7 @@ func NewRouter(staticFS fs.FS, controller *service.Controller, store *service.St
 	}
 
 	// 写接口：网关模式下仅管理员可访问
-	apiWrite := router.Group("/app/FanControlServer/api", auth.Middleware())
+	apiWrite := router.Group("/app/fancontrolserver/api", auth.Middleware())
 	if h.auth.GatewayMode() {
 		apiWrite.Use(RequireAdminMiddleware())
 	}
@@ -106,11 +106,11 @@ func NewRouter(staticFS fs.FS, controller *service.Controller, store *service.St
 				c.JSON(http.StatusBadRequest, gin.H{"error": "非法路径"})
 				return
 			}
-			if strings.HasPrefix(path, "/app/FanControlServer/api") {
+			if strings.HasPrefix(path, "/app/fancontrolserver/api") {
 				c.JSON(http.StatusNotFound, gin.H{"error": "未找到接口"})
 				return
 			}
-			f, err := staticFS.Open(strings.TrimPrefix(path, "/app/FanControlServer/"))
+			f, err := staticFS.Open(strings.TrimPrefix(path, "/app/fancontrolserver/"))
 			if err == nil {
 				defer func(f fs.File) {
 					_ = f.Close()
