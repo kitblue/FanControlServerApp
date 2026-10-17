@@ -6,7 +6,7 @@
 
 
 
-<b>Fan Control Server（定制版）</b> 是基于开源项目 <a href="https://github.com/guan-ry/FanControlServerApp" target="_blank">FanControlServer</a>（guan-ry/FanControlServerApp）品牌定制的智能风扇与温度管理工具，专为飞牛私有云及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。商店中的 Fan Control Server（定制版） 与官方版 Fan Control Server 名称明确区分、可并存安装、互不冲突。
+<b>Fan Control Server（定制版）</b> 是基于开源项目 <a href="https://github.com/guan-ry/FanControlServerApp" target="_blank">FanControlServer</a>（guan-ry/FanControlServerApp）二次开发定制的智能风扇与温度管理工具，专为飞牛私有云及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。商店中的 Fan Control Server（定制版）与官方版 Fan Control Server 名称明确区分，可并存安装、互不冲突。
 
 
 
@@ -30,11 +30,11 @@
 
 
 
-适配飞牛 OS（fnOS）应用中心，本仓库即 FnDepot 第三方源（仓库模式或 JSON 直链均可添加），可在商店一键安装。
+适配飞牛 OS（fnOS）应用中心，本仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。
 
 
 
-> README.md 为简介唯一事实来源，manifest desc 与 fnpack.json desc 由 CI 编译时自动同步。此项目由AI辅助完成。
+> README.md 为简介唯一事实来源，manifest desc 与 fnpack.json desc 由 CI 编译时自动同步。
 
 
 
@@ -42,7 +42,7 @@
 
 
 
-| 能力 | 官方版 FanControlServer | 本定制版（本分支） |
+| 能力 | 官方版 Fan Control Server | 本定制版（本分支） |
 
 |---|---|---|
 
@@ -190,7 +190,7 @@ python scripts/gen_fndepot.py
 
 
 
-每次 CI 运行会自动完成：从上游检查版本并递增 → 构建前端与后端 → 从 README.md 提取简介同步进 manifest 与 fnpack.json → 构建 FPK 并上传 Release（正文取 CHANGELOG.md）→ 运行 `scripts/gen_fndepot.py` 刷新 `FanControlServer/` 应用目录与 fnpack.json 图标相对路径 → 提交更新。修改 README.md 简介或 CHANGELOG.md 更新日志后触发 CI 即可全渠道同步，无需手动改各文件。
+每次 CI 运行会自动完成：跟随官方上游版本号 → 构建前端与后端 → 从 README.md 提取简介同步进 manifest 与 fnpack.json → 构建 FPK 并上传 Release（正文取 CHANGELOG.md）→ 运行 `scripts/gen_fndepot.py` 刷新 `FanControlServer/` 应用目录与 fnpack.json 图标相对路径 → 提交更新。修改 README.md 简介或 CHANGELOG.md 更新日志后触发 CI 即可全渠道同步，无需手动改各文件。
 
 
 
@@ -198,7 +198,7 @@ python scripts/gen_fndepot.py
 
 
 
-- 基于 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 定制（上游开源项目，fork 自 guan-ry/FanControlServerApp）
+- 基于 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发
 
 - IT8528 内核驱动来自 [iamiao/8528](https://github.com/iamiao/8528)
 
