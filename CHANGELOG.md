@@ -4,8 +4,14 @@
 - feat: 90s UI 活跃窗口自动切换全量采集与后台闭环，恢复查看即时切回
 - perf: 采集拆分为全量与温控两套流程，CPU/GPU 温度通道 60s 缓存，消除每秒 sysfs 重复扫描
 - perf: 后台模式停止 intel_gpu_top 常驻进程，恢复查看时按需重启
+- perf: RPM 读取低频采样（10s 缓存），消除每轮每风扇 hwmon 文件读取热点，pprof 定位的 84.6% IO 热点清零
+- perf: 后台周期自适应（温度平稳时轮询周期拉长至 3s，温度变化超 2℃ 即时退回基础周期）
+- perf: PWM 写入增加 2s 时间窗去抖，与 PWM deadzone 组成二级防抖，紧急高温时跳过
 - refactor: readSensors 拆为通道缓存与子集读取，消除并发竞态与重复扫描
 - fix: 后台模式 Telemetry 磁盘详情零值兜底，不再返回空列表
+- fix: 应用标识全链路统一小写 fancontrolserver（FnDepot V2 规范），修复聚合源版本更新无法识别的问题
+- refactor: 网关路由 /app/fancontrolserver 与桌面入口 fancontrolserver.main 对齐包内 manifest
+- ci: fpk 产物命名规范化为 fancontrolserver-v*.*.*-linux-amd64-{url,iframe}.fpk
 - version: 脱离上游版本线，独立发版 v1.3.8
 
 ## v1.3.7.1
