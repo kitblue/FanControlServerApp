@@ -77,14 +77,14 @@ jobs:
           cp manifest.bak manifest   # platform = x86
           fnpack build
           mkdir -p dist
-          mv *.fpk "dist/FanControlServer-${{ steps.get_version.outputs.VERSION }}-linux-amd64-url.fpk"
+          mv *.fpk "dist/fancontrolserver-${{ steps.get_version.outputs.VERSION }}-linux-amd64-url.fpk"
 
       - name: Build amd64 Iframe Version
         run: |
           cp manifest.bak manifest   # platform = x86
           sed -i 's/"type": "url"/"type": "iframe"/' app/ui/config
           fnpack build
-          mv *.fpk "dist/FanControlServer-${{ steps.get_version.outputs.VERSION }}-linux-amd64-iframe.fpk"
+          mv *.fpk "dist/fancontrolserver-${{ steps.get_version.outputs.VERSION }}-linux-amd64-iframe.fpk"
 
       # ========================================================================
       # 以下为 arm64 构建步骤（已注释，如需恢复请取消注释）
@@ -107,7 +107,7 @@ jobs:
       #     cp manifest.bak manifest
       #     sed -i 's/^platform\s*=.*/platform = arm/' manifest
       #     fnpack build
-      #     mv *.fpk "dist/FanControlServer-${{ steps.get_version.outputs.VERSION }}-linux-arm64-url.fpk"
+      #     mv *.fpk "dist/fancontrolserver-${{ steps.get_version.outputs.VERSION }}-linux-arm64-url.fpk"
 
       # - name: Build arm64 Iframe Version
       #   run: |
@@ -115,7 +115,7 @@ jobs:
       #     sed -i 's/^platform\s*=.*/platform = arm/' manifest
       #     sed -i 's/"type": "url"/"type": "iframe"/' app/ui/config
       #     fnpack build
-      #     mv *.fpk "dist/FanControlServer-${{ steps.get_version.outputs.VERSION }}-linux-arm64-iframe.fpk"
+      #     mv *.fpk "dist/fancontrolserver-${{ steps.get_version.outputs.VERSION }}-linux-arm64-iframe.fpk"
 
       # ========================================================================
 
