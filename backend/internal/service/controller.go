@@ -38,8 +38,10 @@ type Controller struct {
 	stopped        bool
 	loopDoneCh     chan struct{}
 	startTime      time.Time
-	sensorChans    []driver.TempChannel // 缓存 hwmon 温度通道列表
-	lastSensorScan time.Time            // 上次扫描时间
+	sensorChans     []driver.TempChannel // 缓存 hwmon 温度通道列表
+	lastSensorScan  time.Time            // 上次扫描时间
+	viewerActiveUntil int64               // UI 查看者活跃窗口截止时间（UnixNano，原子读写），超时进入后台模式
+	backgroundMode    bool                // 后台风扇闭环模式（无活跃查看者）
 }
 
 func NewController(store *Store, history *HistoryStore) *Controller {
@@ -361,7 +363,8 @@ type fanTempNeeds struct {
 // 实际依赖的温度源，保证后台模式只采集闭环真正需要的数据。
 func (c *Controller) resolveFanTempNeeds(cfg model.Config) fanTempNeeds {
 	n := fanTempNeeds{sensorIDs: map[string]bool{}}
-	add := func(src string) {
+	var add func(src string)
+	add = func(src string) {
 		switch {
 		case src == "":
 		case src == "cpu":
