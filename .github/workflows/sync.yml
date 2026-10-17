@@ -40,7 +40,7 @@ env:
 
   # 主应用 FPK 资产名（与 fnpack.json 中 download_url 保持一致）
 
-  APP_ASSET: 'FanControlServer-v1.3.7.1-linux-amd64-iframe.fpk'
+  APP_ASSET: 'fancontrolserver-v1.3.7.1-linux-amd64-iframe.fpk'
 
 
 
@@ -212,7 +212,7 @@ jobs:
 
             echo "APP_VERSION=${CURRENT}" >> "$GITHUB_ENV"
 
-            echo "APP_ASSET=FanControlServer-v${CURRENT}-linux-amd64-iframe.fpk" >> "$GITHUB_ENV"
+            echo "APP_ASSET=fancontrolserver-v${CURRENT}-linux-amd64-iframe.fpk" >> "$GITHUB_ENV"
 
             exit 0
 
@@ -230,7 +230,7 @@ jobs:
 
           sed -i "s/^version.*= .*/version               = $NEW_VERSION/" manifest
 
-          NEW_ASSET="FanControlServer-v${NEW_VERSION}-linux-amd64-iframe.fpk"
+          NEW_ASSET="fancontrolserver-v${NEW_VERSION}-linux-amd64-iframe.fpk"
 
 
 
