@@ -1,41 +1,19 @@
 # Fan Control Server（定制版）— NAS 智能风扇与温度管理
 
-
-
 ![logo](ICON.PNG)
 
+**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。与官方版名称明确区分，可并存安装、互不冲突。
 
+**相对官方版的核心增强：**
 
-<b>Fan Control Server（定制版）</b> 是基于开源项目 <a href="https://github.com/guan-ry/FanControlServerApp" target="_blank">FanControlServer</a>（guan-ry/FanControlServerApp）二次开发定制的智能风扇与温度管理工具，专为飞牛私有云及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。商店中的 Fan Control Server（定制版）与官方版 Fan Control Server 名称明确区分，可并存安装、互不冲突。
+- **驱动**：内置 IT8528 EC 专用 [qnap8528 驱动](https://github.com/iamiao/8528)，安装/升级时自动编译加载；IT87/NCT6775 等通用芯片由 fnOS 内置驱动直接支持
+- **GPU**：NVIDIA/AMD/Intel 全平台温度与使用率，多卡自动取负载最高
+- **硬盘温度**：优先 sysfs hwmon 直读 NVMe/SATA 盘温，零进程开销、不唤醒休眠硬盘，失败才回退 smartctl
+- **CPU**：温度经 hwmon 传感器读取（可自定义），使用率由 /proc/stat 计算
 
-
-
-<b>与官方版的差异：</b>
-
-
-
-- <b>驱动</b>：官方版仅依赖内核通用驱动；本定制版额外内置 IT8528 EC 机型专用 <a href="https://github.com/iamiao/8528" target="_blank">qnap8528 驱动</a>，安装/升级时自动编译加载，支持风扇控制、温度传感器、LED、按键和 VPD 读取（IT87/NCT6775 等通用 Super I/O 芯片由 fnOS 内置驱动直接支持）
-
-
-
-- <b>GPU 信息</b>：官方版仅支持 NVIDIA 独显温度读取（nvidia-smi）；本定制版支持 NVIDIA/AMD/Intel 全平台 GPU 温度与使用率，探测链 nvidia-smi → hwmon（amdgpu/radeon/i915/xe）→ sysfs gpu_busy_percent → i915 PMU 直读 → intel_gpu_top 兜底，多卡自动取负载最高
-
-
-
-- <b>硬盘温度</b>：官方版调用 smartctl 子进程；本定制版优先 sysfs hwmon 直读 NVMe/SATA 盘温，零进程开销、不唤醒休眠硬盘（带 standby 检测），读取失败才回退 smartctl
-
-
-
-- <b>CPU 信息</b>：温度经 hwmon 传感器读取（可在设置中自定义传感器），使用率由 /proc/stat 计算，与官方版一致
-
-
-
-适配飞牛 OS（fnOS）应用中心，本仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。
-
-
+适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。
 
 > README.md 为简介唯一事实来源，manifest desc 与 fnpack.json desc 由 CI 编译时自动同步。
-
 
 
 ## 与官方版的差异（本定制版 vs 官方版）
