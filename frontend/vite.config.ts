@@ -1,6 +1,6 @@
 import {defineConfig} from "vite";
 
-const gatewayBase = "/app/FanControlServer/";
+const gatewayBase = "/app/fancontrolserver/";
 
 export default defineConfig({
     base: gatewayBase,
