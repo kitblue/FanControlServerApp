@@ -126,21 +126,43 @@ jobs:
 
           set -euo pipefail
 
-          CURRENT=$(grep '^version' manifest | sed 's/version.*= *//; s/^ *//; s/ *$//' | tr -d '\r')
+          CURRENT=$(grep '^version' manifest | head -n1 | sed 's/version.*= *//; s/^ *//; s/ *$//' | tr -d '\r')
 
           echo "Current manifest version: $CURRENT"
 
 
 
-          TAG=$(curl -s -H "Accept: application/vnd.github+json" \
+          # 查询上游最新版本（带重试与容错，避免偶发网络导致发布失败）
 
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          TAG=""
 
-            -H "User-Agent: FanControlServer" \
+          for i in 1 2 3; do
 
-            "https://api.github.com/repos/${UPSTREAM_OWNER}/${UPSTREAM_REPO}/releases/latest" \
+            TAG=$(curl -fsSL --max-time 30 \
 
-            | jq -r .tag_name)
+              -H "Accept: application/vnd.github+json" \
+
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+
+              -H "User-Agent: FanControlServer" \
+
+              "https://api.github.com/repos/${UPSTREAM_OWNER}/${UPSTREAM_REPO}/releases/latest" \
+
+              | jq -r '.tag_name // empty' 2>/dev/null) && break
+
+            echo "上游版本查询失败（第 ${i} 次），5 秒后重试"
+
+            sleep 5
+
+          done
+
+          if [ -z "$TAG" ]; then
+
+            echo "::error::无法获取上游 ${UPSTREAM_OWNER}/${UPSTREAM_REPO} 最新版本，请检查上游仓库或网络"
+
+            exit 1
+
+          fi
 
           echo "Upstream latest tag: $TAG"
 
@@ -180,7 +202,7 @@ jobs:
 
 
 
-          # 仅当上游主版本高于当前时才递增；上游未变化则直接结束 job，避免空版本刷屏
+          # 仅当上游主版本高于当前时才递增；上游未变化则跳过 bump（workflow_dispatch 仍会强制构建当前版本）
 
           NEED_BUMP=0
 
@@ -194,9 +216,13 @@ jobs:
 
           if [ "$NEED_BUMP" -ne 1 ]; then
 
-            echo "上游版本未变化（${U1}.${U2}.${U3} == ${C1}.${C2}.${C3}），跳过本次发布"
+            echo "上游版本未变化（${U1}.${U2}.${U3} == ${C1}.${C2}.${C3}），跳过 bump，保持当前版本 $CURRENT"
 
             echo "skip=true" >> "$GITHUB_OUTPUT"
+
+            echo "APP_VERSION=${CURRENT}" >> "$GITHUB_ENV"
+
+            echo "APP_ASSET=FanControlServer-v${CURRENT}-linux-amd64-iframe.fpk" >> "$GITHUB_ENV"
 
             exit 0
 
