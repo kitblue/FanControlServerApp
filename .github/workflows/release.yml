@@ -119,8 +119,21 @@ jobs:
 
       # ========================================================================
 
+      - name: Extract changelog for release body
+        id: changelog
+        run: |
+          VER="${{ steps.get_version.outputs.VERSION }}"
+          python3 - "$VER" <<'EOF'
+          import re, sys
+          ver = sys.argv[1].lstrip('v')
+          txt = open('CHANGELOG.md', encoding='utf-8').read()
+          m = re.search(rf'^## v?{re.escape(ver)}\s*$(.*?)(?=^## v?|\Z)', txt, re.M | re.S)
+          body = m.group(0).strip() if m else f'## v{ver}\n\n- 本次发布包含构建、依赖与 CI 流程更新'
+          open('release_body.md', 'w', encoding='utf-8').write(body + '\n')
+          EOF
+
       - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*.fpk
-          generate_release_notes: true
+          body_path: release_body.md
