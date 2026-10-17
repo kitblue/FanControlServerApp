@@ -29,14 +29,14 @@ except Exception:
 
 # - 配置 -
 
-REPO_SLUG = os.environ.get("GITHUB_REPOSITORY", "KITblue/fantune")
+REPO_SLUG = os.environ.get("GITHUB_REPOSITORY", "kitblue/FanControlServerApp")
 RAW_BASE = f"https://raw.githubusercontent.com/{REPO_SLUG}/main"
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "fnpack.json"
 DIST = ROOT / "dist"
 
-APP_VERSION = os.environ.get("APP_VERSION", "1.3.7.1")
+APP_VERSION = os.environ.get("APP_VERSION", "1.3.7.37")
 APP_ASSET = os.environ.get("APP_ASSET", f"FanControlServer-v{APP_VERSION}-fantune-iframe.fpk")
 
 # 复用 sync_app_desc 的 md-to-html 转换与 README 提取函数（项目介绍单一事实来源 README.md）
@@ -54,7 +54,7 @@ DESC_PLAIN = extract_desc_from_readme(README_TEXT)
 
 SOURCE_INFO = {
     "name": "FanTune",
-    "author": "KITblue",
+    "author": "Kitblue",
     "homepage": f"https://github.com/{REPO_SLUG}",
     "description": DESC_PLAIN,
 }
@@ -147,9 +147,9 @@ def main():
         # FnDepot V2：install_type 仅允许空字符串（默认存储空间）或 root（系统空间）
         "install_type": (manifest.get("install_type") or ""),
         "is_docker": False,
-        "maintainer": manifest.get("maintainer", "KITblue"),
+        "maintainer": manifest.get("maintainer", "Kitblue"),
         "maintainer_url": manifest.get("maintainer_url", f"https://github.com/{REPO_SLUG}"),
-        "distributor": manifest.get("distributor", "KITblue"),
+        "distributor": manifest.get("distributor", "Kitblue"),
         "distributor_url": manifest.get("distributor_url", f"https://github.com/{REPO_SLUG}"),
         "desktop_uidir": manifest.get("desktop_uidir", ""),
         "desktop_applaunchname": manifest.get("desktop_applaunchname", ""),
