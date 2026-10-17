@@ -23,12 +23,14 @@ import (
 // 每次启动需运行数秒才能产出数据，若在采集循环里同步调用会阻塞整个推送链路，
 // 因此改为常驻后台按固定周期刷新缓存，Usage 读取缓存即时返回。
 type GPUDriver struct {
-	mu           sync.Mutex
-	intelStop    chan struct{}
-	intelVal     *float64
-	intelValAt   time.Time
-	intelLastErr error
-	intelRunning bool
+	mu             sync.Mutex
+	intelStop      chan struct{}
+	intelVal       *float64
+	intelValAt     time.Time
+	intelLastErr   error
+	intelRunning   bool
+	hwmonChans     []TempChannel
+	hwmonScannedAt time.Time
 }
 
 func NewGPUDriver() *GPUDriver {
