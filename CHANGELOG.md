@@ -1,5 +1,6 @@
 ## v1.3.7.1
 
+- ui: rebrand page title & status text to Fan Control Server（定制版）
 - docs: polish README to align with community conventions (wording, sources, version-follow-upstream)
 - rebrand: FanTune → Fan Control Server（定制版）; align version to official v1.3.7.1; fix README logo dead link; align asset name with upstream format
 - feat: 迁移 FanTune 定制层至 FanControlServerApp fork（qnap8528 驱动/全平台 GPU 探测/sysfs 盘温 + 商店介绍标明差异）
