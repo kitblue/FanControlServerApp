@@ -4,19 +4,20 @@
     "name": "Fan Control Server（定制版）",
     "author": "Kitblue",
     "homepage": "https://github.com/kitblue/FanControlServerApp",
-    "description": "<b>Fan Control Server（定制版）</b> 是基于开源项目 <a href=\"https://github.com/guan-ry/FanControlServerApp\" target=\"_blank\">FanControlServer</a>（guan-ry/FanControlServerApp）二次开发定制的智能风扇与温度管理工具，专为飞牛私有云及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。商店中的 Fan Control Server（定制版）与官方版 Fan Control Server 名称明确区分，可并存安装、互不冲突。\n\n<b>与官方版的差异：</b>\n\n- <b>驱动</b>：官方版仅依赖内核通用驱动；本定制版额外内置 IT8528 EC 机型专用 <a href=\"https://github.com/iamiao/8528\" target=\"_blank\">qnap8528 驱动</a>，安装/升级时自动编译加载，支持风扇控制、温度传感器、LED、按键和 VPD 读取（IT87/NCT6775 等通用 Super I/O 芯片由 fnOS 内置驱动直接支持）\n\n- <b>GPU 信息</b>：官方版仅支持 NVIDIA 独显温度读取（nvidia-smi）；本定制版支持 NVIDIA/AMD/Intel 全平台 GPU 温度与使用率，探测链 nvidia-smi → hwmon（amdgpu/radeon/i915/xe）→ sysfs gpu_busy_percent → i915 PMU 直读 → intel_gpu_top 兜底，多卡自动取负载最高\n\n- <b>硬盘温度</b>：官方版调用 smartctl 子进程；本定制版优先 sysfs hwmon 直读 NVMe/SATA 盘温，零进程开销、不唤醒休眠硬盘（带 standby 检测），读取失败才回退 smartctl\n\n- <b>CPU 信息</b>：温度经 hwmon 传感器读取（可在设置中自定义传感器），使用率由 /proc/stat 计算，与官方版一致\n\n适配飞牛 OS（fnOS）应用中心，本仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。"
+    "description": "**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。与官方版名称明确区分，可并存安装、互不冲突。\n\n**相对官方版的核心增强：**\n\n- **驱动**：内置 IT8528 EC 专用 [qnap8528 驱动](https://github.com/iamiao/8528)，安装/升级时自动编译加载；IT87/NCT6775 等通用芯片由 fnOS 内置驱动直接支持\n- **GPU**：NVIDIA/AMD/Intel 全平台温度与使用率，多卡自动取负载最高\n- **硬盘温度**：优先 sysfs hwmon 直读 NVMe/SATA 盘温，零进程开销、不唤醒休眠硬盘，失败才回退 smartctl\n- **CPU**：温度经 hwmon 传感器读取（可自定义），使用率由 /proc/stat 计算\n\n适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。"
   },
   "apps": {
     "fancontrolserver": {
+      "appname": "fancontrolserver",
       "display_name": "Fan Control Server（定制版）",
-      "desc": "<b>Fan Control Server（定制版）</b> 是基于开源项目 <a href=\"https://github.com/guan-ry/FanControlServerApp\" target=\"_blank\">FanControlServer</a>（guan-ry/FanControlServerApp）二次开发定制的智能风扇与温度管理工具，专为飞牛私有云及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。商店中的 Fan Control Server（定制版）与官方版 Fan Control Server 名称明确区分，可并存安装、互不冲突。<br><br><b>与官方版的差异：</b><br><br>- <b>驱动</b>：官方版仅依赖内核通用驱动；本定制版额外内置 IT8528 EC 机型专用 <a href=\"https://github.com/iamiao/8528\" target=\"_blank\">qnap8528 驱动</a>，安装/升级时自动编译加载，支持风扇控制、温度传感器、LED、按键和 VPD 读取（IT87/NCT6775 等通用 Super I/O 芯片由 fnOS 内置驱动直接支持）<br><br>- <b>GPU 信息</b>：官方版仅支持 NVIDIA 独显温度读取（nvidia-smi）；本定制版支持 NVIDIA/AMD/Intel 全平台 GPU 温度与使用率，探测链 nvidia-smi → hwmon（amdgpu/radeon/i915/xe）→ sysfs gpu_busy_percent → i915 PMU 直读 → intel_gpu_top 兜底，多卡自动取负载最高<br><br>- <b>硬盘温度</b>：官方版调用 smartctl 子进程；本定制版优先 sysfs hwmon 直读 NVMe/SATA 盘温，零进程开销、不唤醒休眠硬盘（带 standby 检测），读取失败才回退 smartctl<br><br>- <b>CPU 信息</b>：温度经 hwmon 传感器读取（可在设置中自定义传感器），使用率由 /proc/stat 计算，与官方版一致<br><br>适配飞牛 OS（fnOS）应用中心，本仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。",
+      "desc": "**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。与官方版名称明确区分，可并存安装、互不冲突。<br><br>**相对官方版的核心增强：**<br><br>- **驱动**：内置 IT8528 EC 专用 [qnap8528 驱动](https://github.com/iamiao/8528)，安装/升级时自动编译加载；IT87/NCT6775 等通用芯片由 fnOS 内置驱动直接支持<br>- **GPU**：NVIDIA/AMD/Intel 全平台温度与使用率，多卡自动取负载最高<br>- **硬盘温度**：优先 sysfs hwmon 直读 NVMe/SATA 盘温，零进程开销、不唤醒休眠硬盘，失败才回退 smartctl<br>- **CPU**：温度经 hwmon 传感器读取（可自定义），使用率由 /proc/stat 计算<br><br>适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。",
       "platform": [
         "x86"
       ],
       "categories": [
         "系统工具"
       ],
-      "icon_url": "FanControlServer/icon.png",
+      "icon_url": "https://raw.githubusercontent.com/kitblue/FanControlServerApp/main/icons/fancontrol.png",
       "preview_urls": [
         "https://raw.githubusercontent.com/kitblue/FanControlServerApp/main/FanControlServer/Preview/01_overview.png",
         "https://raw.githubusercontent.com/kitblue/FanControlServerApp/main/FanControlServer/Preview/02_fans.png",
@@ -36,15 +37,6 @@
         "v1.3.7.1": "- ui: rebrand page title & status text to Fan Control Server（定制版）\n- docs: polish README to align with community conventions (wording, sources, version-follow-upstream)\n- rebrand: FanTune → Fan Control Server（定制版）; align version to official v1.3.7.1; fix README logo dead link; align asset name with upstream format\n- feat: 迁移 FanTune 定制层至 FanControlServerApp fork（qnap8528 驱动/全平台 GPU 探测/sysfs 盘温 + 商店介绍标明差异）\n- 迁移 fantune 资源: FanControlServer/Preview/03_settings.png\n- 迁移 fantune 资源: FanControlServer/Preview/02_fans.png\n- 迁移 fantune 资源: FanControlServer/Preview/01_overview.png\n- 迁移 fantune 资源: FanControlServer/icon.png\n- feat: 添加启动延时 (#40)\n- feat: 调速曲线增加点位列表编辑，修复手机长按误删 (#36)\n- fix: 保存全局设置时不再清空传感器别名与隐藏列表 (#35)\n- feat: 检查 GitHub 更新提示，并支持曲线点单击输入 (#34)\n- Feat/history persist (#32)\n- feat: 硬盘序列号展示与隐私隐藏,Release 支持双架构打包 (#29)\n- refactor: 移除APIKey鉴权，统一走飞牛网关并清理无用代码 (#24)\n- fix: 修复风扇绑定错误，前端去重改用稳定标识 (#23)\n- fix: 修复传参类型错误 (#22)\n- feat: 引入风扇稳定ID与路径自动同步，重启免重扫，隐藏前端路径项 (#21)\n- fix: 统一默认曲线，修复新风扇参数缺失 (#20)\n- feat: 支持自定义 CPU/GPU 传感器温度读取，CI 构建 url/iframe 双版本 (#19)\n- 接入 fnOS 统一网关与登录认证 (#18)\n- fix: 修复 CPU 温度读取失败问题 & 完善文档 & 升级版本至 1.2.3 (#13)\n- 删除风扇时恢复硬件自动调速\n- feat: 风扇独立配置、降级策略、UI优化及健壮性提升 (#10)\n- 风扇独立配置、降级策略、UI优化及滞回修复 (#9)"
       },
       "releases": {
-        "1.3.7.1": {
-          "packages": {
-            "x86": {
-              "download_url": "https://github.com/kitblue/FanControlServerApp/releases/download/v1.3.7.1/FanControlServer-v1.3.7.1-linux-amd64-iframe.fpk",
-              "sha256": "b4664b0cab9dfa3f2d273d923b7d2b70e7d4b72ec3e4297a8b69d5ac0a0b27a0",
-              "size": 6396177
-            }
-          }
-        },
         "1.3.8": {
           "packages": {
             "x86": {
@@ -54,8 +46,7 @@
             }
           }
         }
-      },
-      "appname": "fancontrolserver"
+      }
     }
   }
 }
