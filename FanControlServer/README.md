@@ -1,6 +1,6 @@
 # FanControlServer
 
-<b>Fan Control Server（定制版）</b> 是基于开源项目 <a href="https://github.com/guan-ry/FanControlServerApp" target="_blank">FanControlServer</a>（guan-ry/FanControlServerApp）二次开发定制的智能风扇与温度管理工具，专为飞牛私有云及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。商店中的 Fan Control Server（定制版）与官方版 Fan Control Server 名称明确区分，可并存安装、互不冲突。
+<b>Fan Control Server（定制版）</b> 是基于开源项目 <a href="https://github.com/guan-ry/FanControlServerApp" target="_blank">FanControlServer</a>（guan-ry/FanControlServerApp）二次开发定制的智能风扇与温度管理工具，专为飞牛私有云及 x86 主板设计：温控曲线、多风扇管理、实时硬件监控。与官方版最大区别是<b>内置 qnap8528 驱动</b>（IT8528 EC 机型自动编译加载，支持风扇/温度/LED/按键/VPD），覆盖更多机型的风扇控制。商店中的 Fan Control Server（定制版）与官方版 Fan Control Server 名称明确区分，不可并存安装。
 
 
 
