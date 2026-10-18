@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -61,6 +62,14 @@ func (d *HWMONDriver) ScanFans() ([]map[string]string, error) {
 			device = filepath.Base(link)
 		}
 
+		// 枚举同 hwmon 目录的温度通道元数据（不读值），供前端展示"该 PWM 风扇可用的传感器"。
+		sensorsJSON := "[]"
+		if sensors := scanDirTempSensors(hwmon, chip, device); len(sensors) > 0 {
+			if raw, err := json.Marshal(sensors); err == nil {
+				sensorsJSON = string(raw)
+			}
+		}
+
 		pwmFiles, _ := filepath.Glob(filepath.Join(hwmon, "pwm[0-9]"))
 		for _, pwmFile := range pwmFiles {
 			idx := strings.TrimPrefix(filepath.Base(pwmFile), "pwm")
@@ -83,10 +92,29 @@ func (d *HWMONDriver) ScanFans() ([]map[string]string, error) {
 				"pwm_path":    pwmFile,
 				"rpm_path":    rpmPath,
 				"enable_path": enablePath,
+				"sensors":     sensorsJSON,
 			})
 		}
 	}
 	return fans, nil
+}
+
+// scanDirTempSensors 枚举单个 hwmon 目录的温度通道元数据（temp*_input + temp*_label），
+// 只读元数据不读值，输出给 ScanFans 作为传感器的 JSON 字符串字段。
+func scanDirTempSensors(hwmon, chip, device string) []map[string]string {
+	inputs, _ := filepath.Glob(filepath.Join(hwmon, "temp*_input"))
+	out := make([]map[string]string, 0, len(inputs))
+	for _, p := range inputs {
+		key := strings.TrimSuffix(filepath.Base(p), "_input")
+		out = append(out, map[string]string{
+			"id":    fmt.Sprintf("%s/%s/%s", chip, device, key),
+			"chip":  chip,
+			"key":   key,
+			"label": readTrimmed(filepath.Join(hwmon, key+"_label"), key),
+			"path":  p,
+		})
+	}
+	return out
 }
 
 func readIntFile(path string) (int, error) {
