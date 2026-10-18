@@ -13,6 +13,8 @@ export interface ScannedFan {
     chip: string;
     device: string;
     pwm_index: number
+    /** 后端扫描附带：同 hwmon 温度通道元数据 JSON 数组字符串，如 [{"id":"coretemp/0000:00:04.0/temp1","key":"temp1","label":"Package id 0","path":"/sys/.../temp1_input"}] */
+    sensors?: string;
 }
 
 export interface FanConfig {
@@ -105,6 +107,8 @@ export interface HistorySeries {
     sensors?: Record<string, HistoryPoint[]>;
     fans_pwm?: Record<string, HistoryPoint[]>;
     fans_rpm?: Record<string, HistoryPoint[]>;
+    /** 每风扇温度源聚合温度曲线（与 fans_pwm 同键） */
+    fans_temp?: Record<string, HistoryPoint[]>;
 }
 
 export type HistoryRange = "1h" | "6h" | "24h" | "7d" | "custom";
