@@ -2,7 +2,7 @@
 
 ![logo](ICON.PNG)
 
-**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控。与官方版名称区分，可并存安装、互不冲突。
+**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控，与官方版名称区分、可并存安装。经轻量化重构，后端始终全量采集并落库，历史曲线连续可靠。
 
 适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。
 
@@ -11,7 +11,7 @@
 
 | 能力 | 官方版 | 本定制版 |
 |---|---|---|
-| 名称 | Fan Control Server | **Fan Control Server（定制版）**：商店/桌面入口不同，可并存安装 |
+| 名称 | Fan Control Server | **Fan Control Server（定制版）**：应用标识 fancontrolserver、桌面入口 fancontrolserver.main，可并存安装 |
 | 驱动 | 仅内核通用驱动（IT87/NCT6775，由 fnOS 提供） | 同左 + 内置 **qnap8528 驱动**（IT8528 EC 机型安装/升级自动编译加载） |
 | GPU 温度 | 仅 NVIDIA（nvidia-smi） | NVIDIA / AMD / Intel 全覆盖：nvidia-smi → hwmon 独显 → hwmon 核显 → gpu/drm 兜底 |
 | GPU 使用率 | 不支持 | nvidia-smi（多卡取最大）→ sysfs gpu_busy_percent → i915 PMU 直读 → intel_gpu_top 兜底 |
@@ -32,7 +32,7 @@
 
 - 🎛️ 通用芯片支持：IT87/NCT6775 等主流 Super I/O 风扇芯片直接支持（fnOS 已内置驱动）；IT8528 EC 机型自动编译安装 qnap8528-kmod 备用驱动
 
-- ⚙️ 深色 Web 界面：响应式、WebSocket 实时推送，经 fnOS 网关 `/app/FanControlServer` 访问
+- ⚙️ 深色 Web 界面：响应式、WebSocket 实时推送，经 fnOS 网关 `/app/fancontrolserver` 访问
 
 
 
@@ -76,7 +76,7 @@
 
 3. 首次启动会自动安装 IT8528 内核驱动（需联网编译）
 
-4. 浏览器访问 `http://<NAS IP>:5666/app/FanControlServer`（或从 fnOS 应用中心点击图标进入）
+4. 浏览器访问 `http://<NAS IP>:5666/app/fancontrolserver`（或从 fnOS 应用中心点击图标进入）
 
 5. 在「设置」页配置温控曲线与安全阈值，开启自动控制
 
@@ -94,7 +94,9 @@
 
 ├── backend/            # Go 后端：温度/风扇采集、GPU 探测（含 qnap8528 驱动加载）、WebSocket 推送
 
-│   └── internal/driver/  # gpu.go（NVIDIA/AMD/Intel 探测链）、smartctl.go（sysfs 直读盘温）
+│   ├── internal/driver/  # gpu.go（NVIDIA/AMD/Intel 探测链）、smartctl.go（sysfs 直读盘温）
+
+│   ├── internal/update/  # checker.go（GitHub API → 302 → CDN 三级降级版本检查）
 
 ├── frontend/           # Vite + TypeScript 前端（构建产物进入 backend/web）
 
