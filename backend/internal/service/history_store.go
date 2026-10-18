@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	historyRetentionDays  = 30
+	historyRetentionDays  = 7
 	historySampleInterval = time.Minute
 )
 
@@ -26,8 +26,8 @@ var (
 	ErrHistoryRangeInvalid  = errors.New("range 参数无效，可选：1h、6h、24h、7d")
 	ErrHistoryFromToPair    = errors.New("from 与 to 必须同时提供")
 	ErrHistoryFromAfterTo   = errors.New("开始时间必须早于结束时间")
-	ErrHistoryCustomTooLong = errors.New("自定义范围不能超过 30 天")
-	ErrHistoryFromTooOld    = errors.New("开始时间不能早于 30 天前")
+	ErrHistoryCustomTooLong = errors.New("自定义范围不能超过 7 天")
+	ErrHistoryFromTooOld    = errors.New("开始时间不能早于 7 天前")
 	ErrHistoryToFuture      = errors.New("结束时间不能晚于当前时间")
 )
 
