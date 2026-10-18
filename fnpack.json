@@ -4,13 +4,13 @@
     "name": "Fan Control Server（定制版）",
     "author": "Kitblue",
     "homepage": "https://github.com/kitblue/FanControlServerApp",
-    "description": "**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控。与官方版最大区别是**内置 qnap8528 驱动**（IT8528 EC 机型自动编译加载，支持风扇/温度/LED/按键/VPD），覆盖更多机型的风扇控制。轻量化与并发安全重构后始终全量采集落库（singleflight 合并、SQLite WAL），历史曲线连续可靠，内置 Prometheus /metrics 可观测。\n\n适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。"
+    "description": "**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控。本定制版内置 qnap8528 内核驱动，安装时自动编译加载，为 IT8528 EC 机型提供完整的风扇控制支持，弥补系统内置驱动对专有 EC 芯片的覆盖不足。轻量化与并发安全重构后始终全量采集落库（singleflight 合并、SQLite WAL），历史曲线连续可靠，内置 Prometheus /metrics 可观测。\n\n适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。"
   },
   "apps": {
     "fancontrolserver": {
       "appname": "fancontrolserver",
       "display_name": "Fan Control Server（定制版）",
-      "desc": "**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控。与官方版最大区别是**内置 qnap8528 驱动**（IT8528 EC 机型自动编译加载，支持风扇/温度/LED/按键/VPD），覆盖更多机型的风扇控制。轻量化与并发安全重构后始终全量采集落库（singleflight 合并、SQLite WAL），历史曲线连续可靠，内置 Prometheus /metrics 可观测。<br><br>适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。",
+      "desc": "**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控。本定制版内置 qnap8528 内核驱动，安装时自动编译加载，为 IT8528 EC 机型提供完整的风扇控制支持，弥补系统内置驱动对专有 EC 芯片的覆盖不足。轻量化与并发安全重构后始终全量采集落库（singleflight 合并、SQLite WAL），历史曲线连续可靠，内置 Prometheus /metrics 可观测。<br><br>适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。",
       "platform": [
         "x86"
       ],
@@ -33,16 +33,17 @@
       "desktop_uidir": "ui",
       "desktop_applaunchname": "fancontrolserver.main",
       "history": {
+        "v1.3.8.1": "- fix: 历史曲线数据保留期由 30 天调整为 7 天",
         "v1.3.8": "- fix: 修复启动报错\n- fix: 修复扫描风扇列表不显示传感器\n- fix: 修复 CPU/GPU/内存环形占用图比例跳脱与 0% 显示异常\n- fix: 修复应用标识不一致导致聚合源版本更新无法识别\n- feat: 风扇温度源支持用户所选传感器组合（max/avg），历史曲线增加对应温度曲线\n- feat: 后台关闭期间历史曲线保持连续完整\n- feat: 项目分类调整为\"系统工具\"\n- feat: 历史曲线温度重叠曲线以双色虚线间隔区分\n- version: 脱离上游版本线，独立发版 v1.3.8",
         "v1.3.7.1": "- rebrand: FanTune 更名为 Fan Control Server（定制版），与官方版名称区分\n- feat: 内置 qnap8528 驱动，支持更多 IT8528 EC 机型\n- feat: GPU 温度与使用率探测覆盖 NVIDIA/AMD/Intel 全平台\n- feat: 硬盘温度直读（不唤醒休眠盘），失败自动回退 smartctl\n- feat: 版本更新检查增加 CDN 备用通道\n- feat: 支持自定义 CPU/GPU 传感器温度读取\n- feat: 风扇稳定 ID 与路径自动同步，重启免重扫\n- feat: 历史曲线持久化\n- feat: 风扇独立配置、降级策略与滞回修复\n- feat: 启动延时、调速曲线点位列表编辑\n- feat: 接入 fnOS 统一网关与登录认证，移除独立 API Key 鉴权"
       },
       "releases": {
-        "1.3.8": {
+        "1.3.8.1": {
           "packages": {
             "x86": {
-              "download_url": "https://github.com/kitblue/FanControlServerApp/releases/download/v1.3.8/fancontrolserver-v1.3.8-linux-amd64-iframe.fpk",
-              "sha256": "571c235fd05613123bcd8ab5316c11f0f9f9be960893dcdfb83a09795d7ed7d6",
-              "size": 8396353
+              "download_url": "https://github.com/kitblue/FanControlServerApp/releases/download/v1.3.8.1/fancontrolserver-v1.3.8.1-linux-amd64-iframe.fpk",
+              "sha256": "9f95ea19f684602e8a2c8bee235c0dc259c7db538b4affc02361731e2777fd27",
+              "size": 8397153
             }
           }
         }
