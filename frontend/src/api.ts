@@ -1,5 +1,5 @@
 import axios from "axios";
-import type {ConfigPayload, CurvePoint, DiskInfo, FanConfig, GlobalConfig, HistoryRange, HistorySeries, ScannedFan, Telemetry, UpdateCheckResult} from "./types";
+import type {ConfigPayload, GlobalConfig, HistoryRange, HistorySeries, ScannedFan, Telemetry, UpdateCheckResult} from "./types";
 
 export let gatewayMode = false;
 
@@ -63,10 +63,6 @@ export async function setFanMode(id: string, mode: "manual" | "curve") {
 
 export async function setFanManualPWM(id: string, pwm: number) {
     await client.post("/fan/set", {id, pwm});
-}
-
-export async function setFanCurve(id: string, curve: CurvePoint[]) {
-    await client.post("/fan/curve", {id, curve});
 }
 
 export async function removeFan(id: string) {

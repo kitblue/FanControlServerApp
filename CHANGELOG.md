@@ -18,6 +18,13 @@
 - ci: fpk 产物命名规范化为 fancontrolserver-v*.*.*-linux-amd64-{url,iframe}.fpk
 - version: 脱离上游版本线，独立发版 v1.3.8（含轻量化回归修订）
 - docs: 项目重写介绍——README 简介与官方差异表对齐 v1.3.8 现状，网关路径统一小写 /app/fancontrolserver
+- refactor: 后端按领域拆包——internal/service/fanctl、telemetry、config/store、internal/metrics（prometheus 埋点）、internal/driver（thermal/gpu 拆分）、update/checker 纯逻辑化，消除大控制器内聚
+- refactor: 前端 main.ts 拆分为 ws/ui/charts/settings（ui/core、ui/curve、ui/fancards、ui/history、ui/settings、ui/sources），自研轻量 store，echarts 按需引入（echarts-setup）
+- fix: 修复前端模块拆分后缺 export 符号问题（openConfirm/refresh 等导出补齐），eslint 清理 37 处未使用导入，tsc 零错误
+- perf: 前端接入 vite-plugin-checker（tsc + eslint 构建门禁）与 eslint 配置，静态检查进构建链路
+- test: 新增 versioncmp/thermal 单元测试与 fnpack.json schema 校验测试，go test 全绿
+- ci: golangci-lint 接入与 setup-go 构建缓存（cache-dependency-path）
+- version: 重构收尾，fpk 重新打包（dist/fancontrolserver-v1.3.8-linux-amd64-iframe.fpk 8394153B, sha256 d749fa49e7a9684105b44bb96e07a25b28f059dd66dda8bae54aa462755b9e3b）
 
 ## v1.3.7.1
 

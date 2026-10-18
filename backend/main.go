@@ -20,6 +20,7 @@ import (
 	"fancontrolserver/internal/api"
 	"fancontrolserver/internal/logging"
 	"fancontrolserver/internal/service"
+	"fancontrolserver/internal/service/config"
 	"fancontrolserver/internal/version"
 )
 
@@ -94,7 +95,7 @@ func main() {
 	}
 
 	cfgPath := resolveConfigPath()
-	store, err := service.NewStore(cfgPath)
+	store, err := config.NewStore(cfgPath)
 	if err != nil {
 		logrus.Fatalf("[主程序] 加载配置失败：%v", err)
 	}

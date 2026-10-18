@@ -1,9 +1,18 @@
 import {defineConfig} from "vite";
+import checker from "vite-plugin-checker";
 
 const gatewayBase = "/app/fancontrolserver/";
 
 export default defineConfig({
     base: gatewayBase,
+    plugins: [
+        checker({
+            typescript: true,
+            eslint: {
+                lintCommand: "eslint src --ext .ts",
+            },
+        }),
+    ],
     build: {
         outDir: "../backend/web",
         emptyOutDir: true

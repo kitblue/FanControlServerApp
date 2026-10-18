@@ -84,27 +84,38 @@ func (h *HistoryStore) RecordSnapshot(t model.Telemetry) {
 		return
 	}
 	ts := t.Timestamp
-	h.recordPoint("cpu_temp", ts, t.CPUTemp)
-	h.recordPoint("gpu_temp", ts, t.GPUTemp)
-	h.recordPoint("disk_avg", ts, t.Disks.AvgTemp)
+	points := make([]historyPoint, 0, 16)
+	points = h.collectPoint(points, "cpu_temp", ts, t.CPUTemp)
+	points = h.collectPoint(points, "gpu_temp", ts, t.GPUTemp)
+	points = h.collectPoint(points, "disk_avg", ts, t.Disks.AvgTemp)
 	for _, s := range t.Sensors {
-		h.recordPoint(s.ID, ts, s.Temp)
+		points = h.collectPoint(points, s.ID, ts, s.Temp)
 	}
 	for _, f := range t.Fans {
 		pwm := float64(f.PWM)
 		rpm := float64(f.RPM)
-		h.recordPoint("fan_pwm:"+f.ID, ts, &pwm)
-		h.recordPoint("fan_rpm:"+f.ID, ts, &rpm)
+		points = h.collectPoint(points, "fan_pwm:"+f.ID, ts, &pwm)
+		points = h.collectPoint(points, "fan_rpm:"+f.ID, ts, &rpm)
+	}
+	if err := h.flushPoints(points); err != nil {
+		logrus.Warnf("[历史] 批量写入 %d 个点失败：%v", len(points), err)
 	}
 	h.maybePrune(ts)
 }
 
-func (h *HistoryStore) recordPoint(series string, now time.Time, value *float64) {
+type historyPoint struct {
+	series string
+	ts     int64
+	value  sql.NullFloat64
+}
+
+// collectPoint 内存防抖：同一 series 在采样间隔内只收录一次，避免无效写入。
+func (h *HistoryStore) collectPoint(points []historyPoint, series string, now time.Time, value *float64) []historyPoint {
 	h.mu.Lock()
 	last := h.lastAppendTimes[series]
 	if !last.IsZero() && now.Sub(last) < historySampleInterval {
 		h.mu.Unlock()
-		return
+		return points
 	}
 	h.lastAppendTimes[series] = now
 	h.mu.Unlock()
@@ -113,13 +124,31 @@ func (h *HistoryStore) recordPoint(series string, now time.Time, value *float64)
 	if value != nil {
 		v = sql.NullFloat64{Float64: *value, Valid: true}
 	}
-	_, err := h.db.Exec(
-		`INSERT OR REPLACE INTO temp_history (series, ts, value) VALUES (?, ?, ?)`,
-		series, now.UTC().Unix(), v,
-	)
-	if err != nil {
-		logrus.Warnf("[历史] 写入 %s 失败：%v", series, err)
+	return append(points, historyPoint{series: series, ts: now.UTC().Unix(), value: v})
+}
+
+// flushPoints 在单个事务内批量 upsert 所有点（每采集周期一次事务）。
+func (h *HistoryStore) flushPoints(points []historyPoint) error {
+	if len(points) == 0 || h.db == nil {
+		return nil
 	}
+	tx, err := h.db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err := tx.Prepare(`INSERT OR REPLACE INTO temp_history (series, ts, value) VALUES (?, ?, ?)`)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	defer func() { _ = stmt.Close() }()
+	for _, p := range points {
+		if _, err = stmt.Exec(p.series, p.ts, p.value); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (h *HistoryStore) maybePrune(now time.Time) {
@@ -220,7 +249,7 @@ func (h *HistoryStore) Query(q HistoryQuery) model.HistorySeries {
 		logrus.Warnf("[历史] 查询失败：%v", err)
 		return empty
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	bySeries := map[string][]model.HistoryPoint{}
 	for rows.Next() {

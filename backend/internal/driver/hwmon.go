@@ -6,28 +6,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"fancontrolserver/internal/thermal"
 )
 
-var allowedPathPrefixes = []string{
-	"/sys/class/hwmon/",
-	"/sys/devices/",
-}
-
-// ValidateHwmonPath 检查路径是否在允许的 sysfs 目录下，防止任意文件读写。
+// ValidateHwmonPath 检查路径是否在允许的 sysfs 目录下（白名单逻辑集中在 thermal 包）。
 func ValidateHwmonPath(path string) error {
-	if path == "" {
-		return nil
-	}
-	cleaned := filepath.Clean(path)
-	if strings.Contains(cleaned, "..") {
-		return fmt.Errorf("路径不允许包含 '..'：%s", path)
-	}
-	for _, prefix := range allowedPathPrefixes {
-		if strings.HasPrefix(cleaned, prefix) {
-			return nil
-		}
-	}
-	return fmt.Errorf("路径不在允许范围内（需位于 /sys/class/hwmon/ 或 /sys/devices/ 下）：%s", path)
+	return thermal.ValidatePath(path)
 }
 
 type HWMONDriver struct{}
@@ -122,52 +107,29 @@ type TempChannel struct {
 	Path   string
 }
 
-// ScanTempChannels 通用扫描所有 hwmon 温度通道。
-// 不做任何品牌识别，原样输出 chip / device / label，分类与展示完全交给上层。
+// ScanTempChannels 通用扫描所有 hwmon 温度通道（委托 thermal 包，sysfs 解析集中且可单测）。
 func (d *HWMONDriver) ScanTempChannels() ([]TempChannel, error) {
-	entries, err := filepath.Glob("/sys/class/hwmon/hwmon*/temp*_input")
+	chs, err := thermal.ScanTempChannels()
 	if err != nil {
 		return nil, err
 	}
-	out := make([]TempChannel, 0, len(entries))
-	for _, p := range entries {
-		dir := filepath.Dir(p)
-		key := strings.TrimSuffix(filepath.Base(p), "_input")
-		chip := readTrimmed(filepath.Join(dir, "name"), filepath.Base(dir))
-
-		device := ""
-		if link, err := os.Readlink(filepath.Join(dir, "device")); err == nil {
-			device = filepath.Base(link)
-		}
-
-		label := readTrimmed(filepath.Join(dir, key+"_label"), "")
-
+	out := make([]TempChannel, 0, len(chs))
+	for _, c := range chs {
 		out = append(out, TempChannel{
-			ID:     chip + "/" + device + "/" + key,
-			Chip:   chip,
-			Device: device,
-			Key:    key,
-			Label:  label,
-			Path:   p,
+			ID:     c.ID,
+			Chip:   c.Chip,
+			Device: c.Device,
+			Key:    c.Key,
+			Label:  c.Label,
+			Path:   c.Path,
 		})
 	}
 	return out, nil
 }
 
-// ReadTemp 读取单个温度通道（mC → °C），过滤明显异常值。
+// ReadTemp 读取单个温度通道（mC → °C，委托 thermal 包实现）。
 func (d *HWMONDriver) ReadTemp(path string) (*float64, error) {
-	if err := ValidateHwmonPath(path); err != nil {
-		return nil, err
-	}
-	raw, err := readIntFile(path)
-	if err != nil {
-		return nil, err
-	}
-	t := float64(raw) / 1000.0
-	if t < -10 || t > 130 {
-		return nil, fmt.Errorf("温度异常：%.1f°C", t)
-	}
-	return &t, nil
+	return thermal.ReadTemp(path)
 }
 
 func readTrimmed(path, def string) string {

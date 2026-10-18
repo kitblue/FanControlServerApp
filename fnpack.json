@@ -41,8 +41,8 @@
           "packages": {
             "x86": {
               "download_url": "https://github.com/kitblue/FanControlServerApp/releases/download/v1.3.8/fancontrolserver-v1.3.8-linux-amd64-iframe.fpk",
-              "sha256": "aab2fc680ffddd87e2ba78f7223ef4c740c8af140b5dffba2e1151aa4e447c06",
-              "size": 6396045
+              "sha256": "d749fa49e7a9684105b44bb96e07a25b28f059dd66dda8bae54aa462755b9e3b",
+              "size": 8394153
             }
           }
         }

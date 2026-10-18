@@ -27,6 +27,13 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.26'
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.15.0
+          working-directory: backend
 
       - name: Build Frontend
         run: |

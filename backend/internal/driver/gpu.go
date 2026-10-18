@@ -1,3 +1,5 @@
+//go:build linux
+
 package driver
 
 import (
@@ -111,16 +113,6 @@ func (d *GPUDriver) UsageForChannel(chip, device string) (*float64, error) {
 		return d.intelUsageWithMonitor()
 	default:
 		return d.Usage()
-	}
-}
-
-// StopIntelMonitor 停止 intel_gpu_top 后台监视循环（服务退出时调用）。
-func (d *GPUDriver) StopIntelMonitor() {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if d.intelStop != nil {
-		close(d.intelStop)
-		d.intelStop = nil
 	}
 }
 

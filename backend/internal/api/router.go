@@ -10,8 +10,10 @@ import (
 	"time"
 
 	"fancontrolserver/internal/logging"
+	"fancontrolserver/internal/metrics"
 	"fancontrolserver/internal/model"
 	"fancontrolserver/internal/service"
+	"fancontrolserver/internal/service/config"
 	"fancontrolserver/internal/update"
 
 	"github.com/gin-gonic/gin"
@@ -21,13 +23,13 @@ import (
 
 type handler struct {
 	controller *service.Controller
-	store      *service.Store
+	store      *config.Store
 	auth       *AuthManager
 	updater    *update.Checker
 	upgrader   websocket.Upgrader
 }
 
-func NewRouter(staticFS fs.FS, controller *service.Controller, store *service.Store, auth *AuthManager) *gin.Engine {
+func NewRouter(staticFS fs.FS, controller *service.Controller, store *config.Store, auth *AuthManager) *gin.Engine {
 	logrus.Info("[路由] 开始初始化路由器")
 
 	if staticFS == nil {
@@ -71,6 +73,7 @@ func NewRouter(staticFS fs.FS, controller *service.Controller, store *service.St
 	}
 
 	router.GET("/app/fancontrolserver/api/auth/status", h.authStatus)
+	router.GET("/app/fancontrolserver/metrics", gin.WrapH(metrics.Handler()))
 
 	// 读接口：网关模式下所有登录用户都可访问（网关已鉴权）
 	apiRead := router.Group("/app/fancontrolserver/api")
@@ -152,12 +155,10 @@ func abortWithError(c *gin.Context, status int, err error) bool {
 }
 
 func (h *handler) deviceInfo(c *gin.Context) {
-	h.controller.MarkViewerActive()
 	c.JSON(http.StatusOK, h.controller.Telemetry())
 }
 
 func (h *handler) deviceHistory(c *gin.Context) {
-	h.controller.MarkViewerActive()
 	series, err := h.controller.QueryHistory(c.Query("range"), c.Query("from"), c.Query("to"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -167,7 +168,6 @@ func (h *handler) deviceHistory(c *gin.Context) {
 }
 
 func (h *handler) deviceScan(c *gin.Context) {
-	h.controller.MarkViewerActive()
 	fans, err := h.controller.ScanFans()
 	if abortWithError(c, http.StatusInternalServerError, err) {
 		return
@@ -288,13 +288,10 @@ func (h *handler) ws(c *gin.Context) {
 		logrus.Infof("[WebSocket] 客户端已断开：%s", clientIP)
 	}()
 
-	// WS 连接视为 UI 查看者，持续刷新活跃窗口，避免长连接期间误进后台模式
-	h.controller.MarkViewerActive()
 	if err = conn.WriteJSON(h.controller.Telemetry()); err != nil {
 		return
 	}
 	for msg := range sub {
-		h.controller.MarkViewerActive()
 		if err = conn.WriteJSON(msg); err != nil {
 			return
 		}
