@@ -347,8 +347,12 @@ export function latestHistoryPointTime(h: HistorySeries): number {
         h.disk_avg,
         ...Object.values(h.sensors ?? {}),
         ...Object.values(h.fans_pwm ?? {}),
+        ...Object.values(h.fans_temp ?? {}),
     ];
     for (const pts of groups) {
+        // 后端 json 序列化时 nil slice 会输出 null（如 cpu_temp），展开 null 会抛
+        // "n is not iterable"，这里统一做防御。
+        if (!Array.isArray(pts)) continue;
         for (const p of pts) {
             const t = new Date(p.time).getTime();
             if (Number.isFinite(t)) max = Math.max(max, t);
@@ -467,7 +471,7 @@ export function updateHistoryChart() {
     const h = historyData;
     const hidden = new Set(store.getConfig().global.sensor_hidden ?? []);
     const series: SeriesOption[] = [];
-    let yAxis: YAXisComponentOption;
+    let yAxis: YAXisComponentOption | YAXisComponentOption[];
 
     if (historyView === "temp") {
         const {min: yMin, max: yMax} = computeTempYAxisRange(h, hidden);
@@ -489,18 +493,35 @@ export function updateHistoryChart() {
             axisLabel: {formatter: (v: number) => `${v.toFixed(0)}°`, margin: 8},
         };
     } else {
+        const fanTempSeries: SeriesOption[] = [];
         for (const fan of store.getConfig().fans ?? []) {
             if (!historyFanSelected.has(fan.id)) continue;
             const pts = h.fans_pwm?.[fan.id];
             if (!pts?.length) continue;
-            series.push(historyLineSeries(`fan_pwm:${fan.id}`, fan.name || fan.id, pts, fanHistoryColor(fan.id), true));
+            const c = fanHistoryColor(fan.id);
+            series.push(historyLineSeries(`fan_pwm:${fan.id}`, fan.name || fan.id, pts, c, true));
+            const tpts = h.fans_temp?.[fan.id];
+            if (!tpts?.length) continue;
+            fanTempSeries.push({
+                ...HISTORY_LINE_DEFAULTS,
+                id: `fan_temp:${fan.id}`,
+                name: `${fan.name || fan.id} 温度`,
+                data: historyPointsToSeriesData(tpts),
+                color: c,
+                lineStyle: {color: c, width: 1.5, type: "dashed"},
+                yAxisIndex: 1,
+            });
         }
-        yAxis = {
-            ...HISTORY_Y_AXIS_BASE,
-            min: 0,
-            max: 100,
-            axisLabel: {formatter: (v: number) => `${v.toFixed(0)}%`, margin: 8},
-        };
+        series.push(...fanTempSeries);
+        yAxis = [
+            {
+                ...HISTORY_Y_AXIS_BASE,
+                min: 0,
+                max: 100,
+                axisLabel: {formatter: (v: number) => `${v.toFixed(0)}%`, margin: 8},
+            },
+            fanTempYAxisOption(fanTempSeries),
+        ];
     }
 
     historyChart.setOption({
@@ -509,6 +530,35 @@ export function updateHistoryChart() {
         series,
     }, {replaceMerge: ["series", "yAxis"], silent: true});
     scheduleHistoryChartResize();
+}
+
+/** 风扇温度组合曲线专用右轴：按 fan_temp 系列数据动态定界，无数据时退化为 0-100°。 */
+function fanTempYAxisOption(fanTempSeries: SeriesOption[]): YAXisComponentOption {
+    let dataMin = Infinity;
+    let dataMax = -Infinity;
+    for (const s of fanTempSeries) {
+        if (typeof s.id !== "string" || !s.id.startsWith("fan_temp:")) continue;
+        for (const p of (s.data as [number, number][]) ?? []) {
+            if (Number.isFinite(p[1])) {
+                dataMin = Math.min(dataMin, p[1]);
+                dataMax = Math.max(dataMax, p[1]);
+            }
+        }
+    }
+    if (!isFinite(dataMin) || !isFinite(dataMax)) {
+        return {
+            ...HISTORY_Y_AXIS_BASE,
+            min: 0,
+            max: 100,
+            axisLabel: {formatter: (v: number) => `${v.toFixed(0)}°`, margin: 8},
+        };
+    }
+    return {
+        ...HISTORY_Y_AXIS_BASE,
+        min: Math.max(0, Math.floor((dataMin - 2) / 5) * 5),
+        max: Math.ceil((dataMax + 2) / 5) * 5 + 5,
+        axisLabel: {formatter: (v: number) => `${v.toFixed(0)}°`, margin: 8},
+    };
 }
 
 export async function loadHistoryChart() {
@@ -561,6 +611,9 @@ export function renderHistoryLegend() {
         for (const fan of store.getConfig().fans ?? []) {
             if (!historyFanSelected.has(fan.id)) continue;
             items.push({name: fan.name || fan.id, color: fanHistoryColor(fan.id)});
+            if (historyData?.fans_temp?.[fan.id]?.length) {
+                items.push({name: `${fan.name || fan.id} 温度`, color: fanHistoryColor(fan.id)});
+            }
         }
     }
 
