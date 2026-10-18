@@ -2,7 +2,7 @@
 
 ![logo](ICON.PNG)
 
-**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控，与官方版名称区分、可并存安装。经轻量化重构，后端始终全量采集并落库，历史曲线连续可靠。
+**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控，与官方版名称区分、可并存安装。轻量化与并发安全重构后始终全量采集落库（singleflight 合并、SQLite WAL），历史曲线连续可靠，内置 Prometheus /metrics 可观测。
 
 适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。
 
@@ -19,6 +19,7 @@
 | CPU 温度 | hwmon 传感器（可自定义） | 与官方版一致 |
 | CPU 使用率 | /proc/stat | 与官方版一致 |
 | 版本更新检查 | GitHub API | GitHub API → releases/latest 302 → jsDelivr CDN 三级降级，规避限流 |
+| 可观测性 | 无 | 内置 Prometheus /metrics，导出采集周期、温度、PWM、RPM、DB 写入等指标 |
 
 ## 功能特性
 
@@ -33,6 +34,8 @@
 - 🎛️ 通用芯片支持：IT87/NCT6775 等主流 Super I/O 风扇芯片直接支持（fnOS 已内置驱动）；IT8528 EC 机型自动编译安装 qnap8528-kmod 备用驱动
 
 - ⚙️ 深色 Web 界面：响应式、WebSocket 实时推送，经 fnOS 网关 `/app/fancontrolserver` 访问
+
+- 📈 可观测性：内置 Prometheus /metrics，导出采集周期、温度、PWM、RPM、DB 写入等指标
 
 
 
@@ -94,11 +97,27 @@
 
 ├── backend/            # Go 后端：温度/风扇采集、GPU 探测（含 qnap8528 驱动加载）、WebSocket 推送
 
-│   ├── internal/driver/  # gpu.go（NVIDIA/AMD/Intel 探测链）、smartctl.go（sysfs 直读盘温）
+│   ├── internal/service/  # 核心业务：controller.go（温控闭环）、fanctl/（PWM 与风扇控制）、telemetry/（采集+singleflight+WAL 落库）、config/（配置存储）
 
-│   ├── internal/update/  # checker.go（GitHub API → 302 → CDN 三级降级版本检查）
+│   ├── internal/driver/  # gpu.go（NVIDIA/AMD/Intel 探测链）、hwmon.go（sysfs 直读盘温）、system.go（gopsutil 内存/负载）
 
-├── frontend/           # Vite + TypeScript 前端（构建产物进入 backend/web）
+│   ├── internal/thermal/ # sysfs 温度采集（CPU/主板/盘温）
+
+│   ├── internal/metrics/ # Prometheus /metrics 埋点
+
+│   ├── internal/update/  # checker.go + versioncmp/（GitHub API → 302 → CDN 三级降级版本检查）
+
+│   ├── internal/api/     # HTTP / WebSocket 接口
+
+│   ├── internal/fnpack/  # FPK 打包读取
+
+│   ├── internal/logging/ # 日志
+
+│   ├── internal/model/   # 数据模型
+
+│   ├── internal/version/ # 版本号
+
+├── frontend/           # Vite + TypeScript 前端（ws/store/ui 模块化，构建产物进入 backend/web）
 
 ├── app/qnap8528-src/   # IT8528 EC 内核驱动源码（DKMS，安装时自动编译）
 
