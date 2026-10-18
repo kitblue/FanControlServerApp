@@ -12,7 +12,7 @@
 
 ## v1.3.7.1（与官方版的区别）
 
-- rebrand: FanTune 更名为 Fan Control Server（定制版），与官方版名称区分、可并存安装
+- rebrand: FanTune 更名为 Fan Control Server（定制版），与官方版名称区分
 - feat: 内置 qnap8528 驱动，支持更多 IT8528 EC 机型
 - feat: GPU 温度与使用率探测覆盖 NVIDIA/AMD/Intel 全平台
 - feat: 硬盘温度直读（不唤醒休眠盘），失败自动回退 smartctl
