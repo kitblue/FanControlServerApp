@@ -117,6 +117,8 @@ type FanRuntime struct {
 	Source    string    `json:"source"`
 	Mode      FanMode   `json:"mode"`
 	TargetPWM int       `json:"target_pwm"`
+	// Temp 为风扇温度源实际使用的聚合温度（单源/组合 max/avg 均归一于此），历史曲线据此绘制每风扇温度。
+	Temp *float64 `json:"temp,omitempty"`
 }
 
 type Telemetry struct {
@@ -156,4 +158,6 @@ type HistorySeries struct {
 	Sensors map[string][]HistoryPoint `json:"sensors,omitempty"`
 	FansPWM map[string][]HistoryPoint `json:"fans_pwm,omitempty"`
 	FansRPM map[string][]HistoryPoint `json:"fans_rpm,omitempty"`
+	// FansTemp 每个风扇温度源聚合温度（combo_avg/combo_max 或单源读数），与 fans_pwm 对齐展示。
+	FansTemp map[string][]HistoryPoint `json:"fans_temp,omitempty"`
 }
