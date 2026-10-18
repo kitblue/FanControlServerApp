@@ -14,8 +14,10 @@
 - refactor: 移除 viewer 活跃检测体系（MarkViewerActive/hasActiveViewers/90s 活跃窗口）与 backgroundMode 后台闭环分流（collectFanControlOnly/resolveFanTempNeeds/后台周期自适应），后端回归"始终全量采集、始终落库"，关窗期间历史曲线连续
 - refactor: 移除配套性能补丁（RPM 低频采样缓存、PWM 写入时间窗去抖、intel_gpu_top 后台监视开关），采集逻辑回归简单直接
 - chore: 清理旧打包产物与冗余二进制（根目录 fpk、dist 旧版 fpk、app/server 旧二进制与官方对照二进制）
+- refactor: 前端清理死代码——api.ts 移除未使用类型导入（DiskInfo/FanConfig/CurvePoint）与未调用接口 setFanCurve，main.ts 移除未使用函数 formatHistoryPWM 与过时注释，tsc noUnusedLocals 零告警
 - ci: fpk 产物命名规范化为 fancontrolserver-v*.*.*-linux-amd64-{url,iframe}.fpk
 - version: 脱离上游版本线，独立发版 v1.3.8（含轻量化回归修订）
+- docs: 项目重写介绍——README 简介与官方差异表对齐 v1.3.8 现状，网关路径统一小写 /app/fancontrolserver
 
 ## v1.3.7.1
 
