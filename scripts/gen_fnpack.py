@@ -202,7 +202,7 @@ def read_changelog_history() -> dict:
 
     text = src.read_text(encoding="utf-8")
 
-    blocks = re.split(r"^##\s+(v[\d.]+)\s*$", text, flags=re.M)
+    blocks = re.split(r"^##\s+(v[\d.]+)(?:\s*（[^）]*）)?\s*$", text, flags=re.M)
 
     history = {}
 
