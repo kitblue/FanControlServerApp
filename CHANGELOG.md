@@ -11,8 +11,11 @@
 - fix: 后台模式 Telemetry 磁盘详情零值兜底，不再返回空列表
 - fix: 应用标识全链路统一小写 fancontrolserver（FnDepot V2 规范），修复聚合源版本更新无法识别的问题
 - refactor: 网关路由 /app/fancontrolserver 与桌面入口 fancontrolserver.main 对齐包内 manifest
+- refactor: 移除 viewer 活跃检测体系（MarkViewerActive/hasActiveViewers/90s 活跃窗口）与 backgroundMode 后台闭环分流（collectFanControlOnly/resolveFanTempNeeds/后台周期自适应），后端回归"始终全量采集、始终落库"，关窗期间历史曲线连续
+- refactor: 移除配套性能补丁（RPM 低频采样缓存、PWM 写入时间窗去抖、intel_gpu_top 后台监视开关），采集逻辑回归简单直接
+- chore: 清理旧打包产物与冗余二进制（根目录 fpk、dist 旧版 fpk、app/server 旧二进制与官方对照二进制）
 - ci: fpk 产物命名规范化为 fancontrolserver-v*.*.*-linux-amd64-{url,iframe}.fpk
-- version: 脱离上游版本线，独立发版 v1.3.8
+- version: 脱离上游版本线，独立发版 v1.3.8（含轻量化回归修订）
 
 ## v1.3.7.1
 
