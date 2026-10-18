@@ -42,6 +42,18 @@ export const HISTORY_LINE_DEFAULTS = {
     tooltip: {show: true},
 } as const;
 
+/** 风扇关联温度曲线专用色板：与转速色板（HISTORY_SERIES_COLORS）错开，便于温度栏内按风扇区分。 */
+export const HISTORY_FAN_TEMP_COLORS = [
+    "#a78bfa", // violet-400
+    "#22d3ee", // cyan-400
+    "#4ade80", // green-400
+    "#fb7185", // rose-400
+    "#fbbf24", // amber-400
+    "#818cf8", // indigo-400
+    "#f472b6", // pink-400
+    "#34d399", // emerald-400
+];
+
 export const HISTORY_CHART_GRID = {left: 8, right: 16, top: 16, bottom: 20, containLabel: true};
 
 export const HISTORY_CHART_ANIM = {animation: false, animationDurationUpdate: 0};
@@ -384,6 +396,12 @@ export function fanHistoryColor(id: string): string {
     return HISTORY_SERIES_COLORS[i % HISTORY_SERIES_COLORS.length];
 }
 
+export function fanTempHistoryColor(id: string): string {
+    const idx = (store.getConfig().fans ?? []).findIndex(f => f.id === id);
+    const i = idx >= 0 ? idx : 0;
+    return HISTORY_FAN_TEMP_COLORS[i % HISTORY_FAN_TEMP_COLORS.length];
+}
+
 export function historyPointsToSeriesData(points: HistoryPoint[]): [number, number][] {
     const out: [number, number][] = [];
     for (const p of points) {
@@ -502,13 +520,14 @@ export function updateHistoryChart() {
             series.push(historyLineSeries(`fan_pwm:${fan.id}`, fan.name || fan.id, pts, c, true));
             const tpts = h.fans_temp?.[fan.id];
             if (!tpts?.length) continue;
+            const tc = fanTempHistoryColor(fan.id);
             fanTempSeries.push({
                 ...HISTORY_LINE_DEFAULTS,
                 id: `fan_temp:${fan.id}`,
                 name: `${fan.name || fan.id} 温度`,
                 data: historyPointsToSeriesData(tpts),
-                color: c,
-                lineStyle: {color: c, width: 1.5, type: "dashed"},
+                color: tc,
+                lineStyle: {color: tc, width: 2, type: "dashed"},
                 yAxisIndex: 1,
             });
         }
@@ -612,7 +631,7 @@ export function renderHistoryLegend() {
             if (!historyFanSelected.has(fan.id)) continue;
             items.push({name: fan.name || fan.id, color: fanHistoryColor(fan.id)});
             if (historyData?.fans_temp?.[fan.id]?.length) {
-                items.push({name: `${fan.name || fan.id} 温度`, color: fanHistoryColor(fan.id)});
+                items.push({name: `${fan.name || fan.id} 温度`, color: fanTempHistoryColor(fan.id)});
             }
         }
     }
