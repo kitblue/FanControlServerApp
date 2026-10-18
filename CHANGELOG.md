@@ -25,6 +25,7 @@
 - test: 新增 versioncmp/thermal 单元测试与 fnpack.json schema 校验测试，go test 全绿
 - ci: golangci-lint 接入与 setup-go 构建缓存（cache-dependency-path）
 - version: 重构收尾，fpk 重新打包（dist/fancontrolserver-v1.3.8-linux-amd64-iframe.fpk 8394153B, sha256 d749fa49e7a9684105b44bb96e07a25b28f059dd66dda8bae54aa462755b9e3b）
+- docs: 重建简介——README 简介重写（定制版定位/智能温控/轻量化并发安全/可观测性），同步 manifest 与 fnpack.json desc，项目结构对齐重构后代码
 
 ## v1.3.7.1
 
