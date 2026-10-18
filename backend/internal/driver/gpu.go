@@ -64,9 +64,10 @@ func (d *GPUDriver) Temp() (*float64, error) {
 
 // Usage 返回 GPU 使用率（0-100%）。
 // 探测顺序：1) nvidia-smi（NVIDIA 独显，支持多卡，取所有卡 utilization.gpu 的最大值）；
-//           2) sysfs gpu_busy_percent（由 amdgpu/xe 内核驱动直接暴露，覆盖 AMD 独显、Intel Arc 独显与部分核显）；
-//           3) i915 PMU 直读（Intel 旧核显 i915 驱动首选，perf_event_open 读引擎 busy 计数，与 resmon/intel_gpu_top 同源且零阻塞）；
-//           4) intel_gpu_top（PMU 不可用时兜底，解析工具输出）；
+//  2. sysfs gpu_busy_percent（由 amdgpu/xe 内核驱动直接暴露，覆盖 AMD 独显、Intel Arc 独显与部分核显）；
+//  3. i915 PMU 直读（Intel 旧核显 i915 驱动首选，perf_event_open 读引擎 busy 计数，与 resmon/intel_gpu_top 同源且零阻塞）；
+//  4. intel_gpu_top（PMU 不可用时兜底，解析工具输出）；
+//
 // 均不可用时返回 nil，并在日志记录各步失败原因便于诊断。
 func (d *GPUDriver) Usage() (*float64, error) {
 	// 1. NVIDIA 独显（多卡取最大值）
@@ -299,7 +300,7 @@ func (d *GPUDriver) usageFromPMU() (*float64, error) {
 	}
 	defer func() {
 		for _, fd := range fds {
-			syscall.Close(fd)
+			_ = syscall.Close(fd)
 		}
 	}()
 	// 3. 基线读数
