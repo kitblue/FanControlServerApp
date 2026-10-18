@@ -402,6 +402,15 @@ export function fanTempHistoryColor(id: string): string {
     return HISTORY_FAN_TEMP_COLORS[i % HISTORY_FAN_TEMP_COLORS.length];
 }
 
+/** 将 #rrggbb 向白色混合变亮（同色系），用于温度曲线双色虚线间隔显示时的辅助虚线颜色。 */
+function lightenHex(hex: string, amount = 0.35): string {
+    const n = parseInt(hex.slice(1), 16);
+    const r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
+    const mix = (c: number) => Math.round(c + (255 - c) * amount);
+    const v = (mix(r) << 16) | (mix(g) << 8) | mix(b);
+    return `#${v.toString(16).padStart(6, "0")}`;
+}
+
 export function historyPointsToSeriesData(points: HistoryPoint[]): [number, number][] {
     const out: [number, number][] = [];
     for (const p of points) {
@@ -521,14 +530,30 @@ export function updateHistoryChart() {
             const tpts = h.fans_temp?.[fan.id];
             if (!tpts?.length) continue;
             const tc = fanTempHistoryColor(fan.id);
+            const tdata = historyPointsToSeriesData(tpts);
+            // 主曲线：自身颜色实线
             fanTempSeries.push({
                 ...HISTORY_LINE_DEFAULTS,
                 id: `fan_temp:${fan.id}`,
                 name: `${fan.name || fan.id} 温度`,
-                data: historyPointsToSeriesData(tpts),
+                data: tdata,
                 color: tc,
-                lineStyle: {color: tc, width: 2, type: "dashed"},
+                lineStyle: {color: tc, width: 2, type: "solid"},
                 yAxisIndex: 1,
+            });
+            // 辅助虚线系列：同色系变亮颜色、虚线线型，与主实线叠加形成"双色虚线间隔"，
+            // 重叠区域仍能看出层次；不参与 tooltip/图例/悬停，避免重复误导。
+            fanTempSeries.push({
+                ...HISTORY_LINE_DEFAULTS,
+                id: `fan_temp_aux:${fan.id}`,
+                name: "",
+                data: tdata,
+                color: lightenHex(tc),
+                lineStyle: {color: lightenHex(tc), width: 2, type: "dashed"},
+                yAxisIndex: 1,
+                silent: true,
+                tooltip: {show: false},
+                legendHoverLink: false,
             });
         }
         series.push(...fanTempSeries);
