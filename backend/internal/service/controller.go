@@ -185,7 +185,7 @@ func (c *Controller) collectFullTelemetry(cfg model.Config) model.Telemetry {
 func (c *Controller) computeFans(cfg model.Config, global model.GlobalConfig, cpuTemp, gpuTemp *float64, disks model.DiskPayload, sensors []model.SensorReading) []model.FanRuntime {
 	fans := make([]model.FanRuntime, 0, len(cfg.Fans))
 	for _, fan := range cfg.Fans {
-		target, _ := fanctl.CalculateTargetPWM(c.tracker, fan, global, cpuTemp, gpuTemp, disks, sensors)
+		target, resolvedTemp := fanctl.CalculateTargetPWM(c.tracker, fan, global, cpuTemp, gpuTemp, disks, sensors)
 		var applied int
 		if target < 0 {
 			// 温度源不可用且策略为 keep_last：保持上次 PWM 不动
@@ -211,6 +211,7 @@ func (c *Controller) computeFans(cfg model.Config, global model.GlobalConfig, cp
 			Source:    fan.Source,
 			Mode:      fan.Mode,
 			TargetPWM: target,
+			Temp:      resolvedTemp,
 		})
 	}
 	return fans
