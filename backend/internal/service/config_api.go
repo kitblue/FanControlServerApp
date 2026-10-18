@@ -131,27 +131,15 @@ func (c *Controller) RemoveFan(id string) error {
 	return nil
 }
 
-// ScanFans 扫描系统风扇并返回未加入配置的候选（不自动写入配置）。
+// ScanFans 扫描系统风扇并返回全部已识别候选（含已在配置中的项）。
+// 已配置项由前端根据 chip/device/pwm_index 标记为禁用勾选，保证
+// "扫描并添加风扇"列表对用户可见所有已识别风扇及其传感器，不自动写入配置。
 func (c *Controller) ScanFans() ([]map[string]string, error) {
 	scanned, err := c.hwmon.ScanFans()
 	if err != nil {
 		return nil, err
 	}
-	existing := map[string]bool{}
-	for _, fan := range c.store.Get().Fans {
-		if fan.Chip != "" && fan.PWMIndex > 0 {
-			existing[fan.Chip+"|"+fan.Device+"|"+fmt.Sprint(fan.PWMIndex)] = true
-		}
-	}
-	out := make([]map[string]string, 0, len(scanned))
-	for _, s := range scanned {
-		key := s["chip"] + "|" + s["device"] + "|" + s["pwm_index"]
-		if existing[key] {
-			continue
-		}
-		out = append(out, s)
-	}
-	return out, nil
+	return scanned, nil
 }
 
 // autoDiscoverFansOnFirstRun 首次运行时自动扫描并加入风扇。
