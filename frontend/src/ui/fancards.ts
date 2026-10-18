@@ -260,14 +260,30 @@ export function renderScanTable() {
     tbody.innerHTML = lastScanResults.map((s, i) => {
         const pwmIndex = Number(s.pwm_index)
         const taken = fanIdentityTaken(s.chip, s.device, pwmIndex);
+        const sensors = parseScannedSensors(s);
+        const sensorCell = sensors.length > 0
+            ? `<div class="space-y-0.5">${sensors.map(x => `<div class="text-[10px] text-sky-300/90 break-all"><span class="text-slate-500 font-mono">${esc(x.key)}</span> ${esc(x.label)}</div>`).join("")}</div>`
+            : `<span class="text-[10px] text-slate-500">—</span>`;
         return `
 <tr class="border-b border-slate-800 ${taken ? "opacity-50" : ""}">
   <td class="p-2 align-top"><input type="checkbox" data-scan-idx="${i}" class="scan-cb rounded border-slate-600" ${taken ? "disabled" : ""} /></td>
   <td class="p-2 align-top text-slate-300">${esc(s.name)}<div class="text-[10px] text-slate-500 font-mono mt-1">${esc(s.id)}</div></td>
+  <td class="p-2 align-top">${sensorCell}</td>
   <td class="p-2 align-top font-mono text-[10px] text-slate-400 break-all">${esc(s.pwm_path)}</td>
   <td class="p-2 align-top font-mono text-[10px] text-slate-400 break-all">${esc(s.rpm_path || "—")}</td>
 </tr>`;
     }).join("");
+}
+
+/** 解析 ScanFans 返回的 sensors JSON 字符串（后端 hwmon 扫描附加的 temp 通道元数据）。 */
+function parseScannedSensors(s: ScannedFan): {key: string; label: string}[] {
+    if (!s.sensors) return [];
+    try {
+        const arr = JSON.parse(s.sensors) as {key: string; label: string}[];
+        return Array.isArray(arr) ? arr : [];
+    } catch {
+        return [];
+    }
 }
 
 export async function addScannedFansFromSelection() {
