@@ -62,7 +62,10 @@ export function loadDiskSerialVisible(): boolean {
 
 export let showDiskSerial = loadDiskSerialVisible();
 
-export const RING_CIRCUMFERENCE = 2 * Math.PI * 54;
+// 与 index.html 环形 SVG circle r=15.5（stroke-dasharray="97.4"）严格匹配：
+// 周长 = 2π×15.5 ≈ 97.39。旧值 2π×54≈339 与 SVG 实际 dasharray 不符，
+// 导致 0% 显示约 1/3 圈且比例跳脱。
+export const RING_CIRCUMFERENCE = 2 * Math.PI * 15.5;
 
 let lastUptime = 0;
 let lastUptimeReceived = 0;
