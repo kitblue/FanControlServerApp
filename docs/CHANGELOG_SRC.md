@@ -1,61 +1,34 @@
 ## v1.3.8
 
-- fix: 修复前端启动报错 "n is not iterable"——历史曲线 latestHistoryPointTime 对 nil 温度序列（cpu_temp/gpu_temp/disk_avg）直接迭代崩溃，增加 Array.isArray 防御并初始化空数组
-- fix: 修复扫描风扇列表不显示传感器——hwmon ScanFans 同步枚举同目录温度通道元数据并附 sensors 字段，前端扫描表新增"传感器"列展示
-- fix: 修复 CPU/GPU/内存环形占用图跳脱与 0% 占半圈——RING_CIRCUMFERENCE 由 2π×54 修正为与 SVG r=15.5/stroke-dasharray=97.4 匹配的 2π×15.5，dashoffset 计算回归正确比例
-- feat: 风扇温度源支持用户所选传感器组合（combo_avg/combo_max，取最大值或平均值）并持久化到配置；后端每次温控计算将聚合温度落库（fan_temp:<id>），前端历史曲线为每个风扇增加对应组合传感器聚合温度虚线曲线（双轴展示）
-- docs: 更新 CHANGELOG 与 FnUnify 源信息（本轮修复与增强条目）
-- feat: 后台风扇闭环模式，无 UI 查看时仅采集风扇温控最小数据，闲置 CPU/IO 占用大幅下降
-- feat: 90s UI 活跃窗口自动切换全量采集与后台闭环，恢复查看即时切回
-- perf: 采集拆分为全量与温控两套流程，CPU/GPU 温度通道 60s 缓存，消除每秒 sysfs 重复扫描
-- perf: 后台模式停止 intel_gpu_top 常驻进程，恢复查看时按需重启
-- perf: RPM 读取低频采样（10s 缓存），消除每轮每风扇 hwmon 文件读取热点，pprof 定位的 84.6% IO 热点清零
-- perf: 后台周期自适应（温度平稳时轮询周期拉长至 3s，温度变化超 2℃ 即时退回基础周期）
-- perf: PWM 写入增加 2s 时间窗去抖，与 PWM deadzone 组成二级防抖，紧急高温时跳过
-- refactor: readSensors 拆为通道缓存与子集读取，消除并发竞态与重复扫描
-- fix: 后台模式 Telemetry 磁盘详情零值兜底，不再返回空列表
-- fix: 应用标识全链路统一小写 fancontrolserver（FnDepot V2 规范），修复聚合源版本更新无法识别的问题
-- refactor: 网关路由 /app/fancontrolserver 与桌面入口 fancontrolserver.main 对齐包内 manifest
-- refactor: 移除 viewer 活跃检测体系（MarkViewerActive/hasActiveViewers/90s 活跃窗口）与 backgroundMode 后台闭环分流（collectFanControlOnly/resolveFanTempNeeds/后台周期自适应），后端回归"始终全量采集、始终落库"，关窗期间历史曲线连续
-- refactor: 移除配套性能补丁（RPM 低频采样缓存、PWM 写入时间窗去抖、intel_gpu_top 后台监视开关），采集逻辑回归简单直接
-- chore: 清理旧打包产物与冗余二进制（根目录 fpk、dist 旧版 fpk、app/server 旧二进制与官方对照二进制）
-- refactor: 前端清理死代码——api.ts 移除未使用类型导入（DiskInfo/FanConfig/CurvePoint）与未调用接口 setFanCurve，main.ts 移除未使用函数 formatHistoryPWM 与过时注释，tsc noUnusedLocals 零告警
-- ci: fpk 产物命名规范化为 fancontrolserver-v*.*.*-linux-amd64-{url,iframe}.fpk
-- version: 脱离上游版本线，独立发版 v1.3.8（含轻量化回归修订）
-- docs: 项目重写介绍——README 简介与官方差异表对齐 v1.3.8 现状，网关路径统一小写 /app/fancontrolserver
-- refactor: 后端按领域拆包——internal/service/fanctl、telemetry、config/store、internal/metrics（prometheus 埋点）、internal/driver（thermal/gpu 拆分）、update/checker 纯逻辑化，消除大控制器内聚
-- refactor: 前端 main.ts 拆分为 ws/ui/charts/settings（ui/core、ui/curve、ui/fancards、ui/history、ui/settings、ui/sources），自研轻量 store，echarts 按需引入（echarts-setup）
-- fix: 修复前端模块拆分后缺 export 符号问题（openConfirm/refresh 等导出补齐），eslint 清理 37 处未使用导入，tsc 零错误
-- perf: 前端接入 vite-plugin-checker（tsc + eslint 构建门禁）与 eslint 配置，静态检查进构建链路
-- test: 新增 versioncmp/thermal 单元测试与 fnpack.json schema 校验测试，go test 全绿
-- ci: golangci-lint 接入与 setup-go 构建缓存（cache-dependency-path）
-- version: 重构收尾，fpk 重新打包（dist/fancontrolserver-v1.3.8-linux-amd64-iframe.fpk 8394153B, sha256 d749fa49e7a9684105b44bb96e07a25b28f059dd66dda8bae54aa462755b9e3b）
-- docs: 重建简介——README 简介重写（定制版定位/智能温控/轻量化并发安全/可观测性），同步 manifest 与 fnpack.json desc，项目结构对齐重构后代码
+- refactor: 后端按领域模块化拆分（服务/驱动/热管理/指标/更新/配置独立包），消除大控制器内聚
+- perf: 采集与落库引入 singleflight 并发合并与 SQLite WAL，历史曲线连续可靠
+- refactor: 硬件采集改用 gopsutil，替代手写 /proc 解析
+- refactor: 前端 main.ts 模块化拆分（ws/store/ui 分层），echarts 按需引入
+- ci: 接入构建门禁（tsc/eslint 静态检查、golangci-lint、单元测试、setup-go 构建缓存）
+- test: 新增版本比较、热管理、fnpack schema 单元测试
+- chore: fpk 瘦身与产物命名规范化，清理旧打包产物与冗余二进制
+- refactor: 移除后台闭环分流与活跃检测，后端始终全量采集落库，关窗期间历史曲线连续完整
+- fix: 应用标识全链路统一小写 fancontrolserver，修复聚合源版本更新无法识别的问题
+- fix: 修复前端启动报错（历史曲线对空温度序列崩溃）
+- fix: 修复扫描风扇列表不显示传感器
+- fix: 修复 CPU/GPU/内存环形占用图比例跳脱与 0% 显示异常
+- feat: 风扇温度源支持用户所选传感器组合（max/avg），历史曲线增加对应聚合温度曲线
+- feat: 项目分类调整为"系统工具"
+- docs: 重建简介与更新日志，同步发布文档
+- version: 脱离上游版本线，独立发版 v1.3.8
 
 ## v1.3.7.1
 
-- ui: rebrand page title & status text to Fan Control Server（定制版）
-- docs: polish README to align with community conventions (wording, sources, version-follow-upstream)
-- rebrand: FanTune → Fan Control Server（定制版）; align version to official v1.3.7.1; fix README logo dead link; align asset name with upstream format
-- feat: 迁移 FanTune 定制层至 FanControlServerApp fork（qnap8528 驱动/全平台 GPU 探测/sysfs 盘温 + 商店介绍标明差异）
-- 迁移 fantune 资源: FanControlServer/Preview/03_settings.png
-- 迁移 fantune 资源: FanControlServer/Preview/02_fans.png
-- 迁移 fantune 资源: FanControlServer/Preview/01_overview.png
-- 迁移 fantune 资源: FanControlServer/icon.png
-- feat: 添加启动延时 (#40)
-- feat: 调速曲线增加点位列表编辑，修复手机长按误删 (#36)
-- fix: 保存全局设置时不再清空传感器别名与隐藏列表 (#35)
-- feat: 检查 GitHub 更新提示，并支持曲线点单击输入 (#34)
-- Feat/history persist (#32)
-- feat: 硬盘序列号展示与隐私隐藏,Release 支持双架构打包 (#29)
-- refactor: 移除APIKey鉴权，统一走飞牛网关并清理无用代码 (#24)
-- fix: 修复风扇绑定错误，前端去重改用稳定标识 (#23)
-- fix: 修复传参类型错误 (#22)
-- feat: 引入风扇稳定ID与路径自动同步，重启免重扫，隐藏前端路径项 (#21)
-- fix: 统一默认曲线，修复新风扇参数缺失 (#20)
-- feat: 支持自定义 CPU/GPU 传感器温度读取，CI 构建 url/iframe 双版本 (#19)
-- 接入 fnOS 统一网关与登录认证 (#18)
-- fix: 修复 CPU 温度读取失败问题 & 完善文档 & 升级版本至 1.2.3 (#13)
-- 删除风扇时恢复硬件自动调速
-- feat: 风扇独立配置、降级策略、UI优化及健壮性提升 (#10)
-- 风扇独立配置、降级策略、UI优化及滞回修复 (#9)
+- rebrand: FanTune 更名为 Fan Control Server（定制版），与官方版名称区分、可并存安装
+- feat: 内置 qnap8528 驱动（IT8528 EC 机型自动编译加载），官方版仅依赖内核通用驱动
+- feat: GPU 探测覆盖 NVIDIA/AMD/Intel 全平台温度与使用率，官方版仅支持 NVIDIA 独显温度
+- feat: 硬盘温度优先 sysfs hwmon 直读（零进程开销、不唤醒休眠盘），失败回退 smartctl，官方版仅走 smartctl 子进程
+- feat: 版本更新检查增加 CDN 降级，规避 GitHub API 限流
+- feat: 支持自定义 CPU/GPU 传感器温度读取
+- feat: 风扇稳定 ID 与路径自动同步，重启免重扫
+- feat: 历史曲线持久化
+- feat: 风扇独立配置、降级策略与滞回修复
+- feat: 启动延时、调速曲线点位列表编辑
+- feat: 接入 fnOS 统一网关与登录认证
+- refactor: 移除 API Key 鉴权，统一走飞牛网关
+- docs: 商店介绍标明与官方版差异
