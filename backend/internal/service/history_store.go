@@ -96,6 +96,7 @@ func (h *HistoryStore) RecordSnapshot(t model.Telemetry) {
 		rpm := float64(f.RPM)
 		points = h.collectPoint(points, "fan_pwm:"+f.ID, ts, &pwm)
 		points = h.collectPoint(points, "fan_rpm:"+f.ID, ts, &rpm)
+		points = h.collectPoint(points, "fan_temp:"+f.ID, ts, f.Temp)
 	}
 	if err := h.flushPoints(points); err != nil {
 		logrus.Warnf("[历史] 批量写入 %d 个点失败：%v", len(points), err)
@@ -273,9 +274,10 @@ func (h *HistoryStore) Query(q HistoryQuery) model.HistorySeries {
 
 	interval := downsampleInterval(q.To.Sub(q.From))
 	out := model.HistorySeries{
-		Sensors: map[string][]model.HistoryPoint{},
-		FansPWM: map[string][]model.HistoryPoint{},
-		FansRPM: map[string][]model.HistoryPoint{},
+		Sensors:  map[string][]model.HistoryPoint{},
+		FansPWM:  map[string][]model.HistoryPoint{},
+		FansRPM:  map[string][]model.HistoryPoint{},
+		FansTemp: map[string][]model.HistoryPoint{},
 	}
 	for series, pts := range bySeries {
 		pts = downsampleSeries(pts, interval)
@@ -290,6 +292,8 @@ func (h *HistoryStore) Query(q HistoryQuery) model.HistorySeries {
 			out.FansPWM[strings.TrimPrefix(series, "fan_pwm:")] = pts
 		case strings.HasPrefix(series, "fan_rpm:"):
 			out.FansRPM[strings.TrimPrefix(series, "fan_rpm:")] = pts
+		case strings.HasPrefix(series, "fan_temp:"):
+			out.FansTemp[strings.TrimPrefix(series, "fan_temp:")] = pts
 		default:
 			out.Sensors[series] = pts
 		}
@@ -302,6 +306,9 @@ func (h *HistoryStore) Query(q HistoryQuery) model.HistorySeries {
 	}
 	if len(out.FansRPM) == 0 {
 		out.FansRPM = nil
+	}
+	if len(out.FansTemp) == 0 {
+		out.FansTemp = nil
 	}
 	return out
 }
