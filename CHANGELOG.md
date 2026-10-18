@@ -1,5 +1,10 @@
 ## v1.3.8
 
+- fix: 修复前端启动报错 "n is not iterable"——历史曲线 latestHistoryPointTime 对 nil 温度序列（cpu_temp/gpu_temp/disk_avg）直接迭代崩溃，增加 Array.isArray 防御并初始化空数组
+- fix: 修复扫描风扇列表不显示传感器——hwmon ScanFans 同步枚举同目录温度通道元数据并附 sensors 字段，前端扫描表新增"传感器"列展示
+- fix: 修复 CPU/GPU/内存环形占用图跳脱与 0% 占半圈——RING_CIRCUMFERENCE 由 2π×54 修正为与 SVG r=15.5/stroke-dasharray=97.4 匹配的 2π×15.5，dashoffset 计算回归正确比例
+- feat: 风扇温度源支持用户所选传感器组合（combo_avg/combo_max，取最大值或平均值）并持久化到配置；后端每次温控计算将聚合温度落库（fan_temp:<id>），前端历史曲线为每个风扇增加对应组合传感器聚合温度虚线曲线（双轴展示）
+- docs: 更新 CHANGELOG 与 FnUnify 源信息（本轮修复与增强条目）
 - feat: 后台风扇闭环模式，无 UI 查看时仅采集风扇温控最小数据，闲置 CPU/IO 占用大幅下降
 - feat: 90s UI 活跃窗口自动切换全量采集与后台闭环，恢复查看即时切回
 - perf: 采集拆分为全量与温控两套流程，CPU/GPU 温度通道 60s 缓存，消除每秒 sysfs 重复扫描
