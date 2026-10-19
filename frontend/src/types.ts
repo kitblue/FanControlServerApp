@@ -60,6 +60,7 @@ export interface GlobalConfig {
     history_fans?: string[] | null;
     history_from?: string;
     history_to?: string;
+    theme_mode?: "system" | "light" | "dark";
 }
 
 export interface SensorReading {
@@ -112,6 +113,14 @@ export interface HistorySeries {
 }
 
 export type HistoryRange = "1h" | "6h" | "24h" | "7d" | "custom";
+
+/** GET /api/system/storage 历史数据库只读概览（仅主库文件大小） */
+export interface StorageStats {
+    available: boolean;
+    path: string;
+    size_bytes: number;
+    updated_at: string;
+}
 
 export interface UpdateCheckResult {
     current: string;
