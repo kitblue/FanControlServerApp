@@ -1,5 +1,5 @@
 import axios from "axios";
-import type {ConfigPayload, GlobalConfig, HistoryRange, HistorySeries, ScannedFan, Telemetry, UpdateCheckResult} from "./types";
+import type {ConfigPayload, GlobalConfig, HistoryRange, HistorySeries, ScannedFan, StorageStats, Telemetry, UpdateCheckResult} from "./types";
 
 export let gatewayMode = false;
 
@@ -76,6 +76,12 @@ export async function fetchHistory(params: { range?: Exclude<HistoryRange, "cust
 
 export async function setGlobalConfig(payload: GlobalConfig) {
     await client.post("/global/config", payload);
+}
+
+/** 读取历史数据库文件占用（只读，仅主库文件大小） */
+export async function fetchStorageStats() {
+    const {data} = await client.get<StorageStats>("/system/storage");
+    return data;
 }
 
 export async function checkUpdate(force = false) {
