@@ -130,7 +130,8 @@ func (c *Controller) QueryHistory(rangeParam, fromParam, toParam string) (model.
 }
 
 // loop 主循环：按配置周期全量采集、落库并广播。
-// 采集与落库不依赖 UI 是否有查看者，关闭窗口期间历史曲线连续，重开窗口即恢复完整展示。
+// 采集与落库不依赖 UI 是否有查看者：服务运行期间持续采样，关闭窗口再打开即可恢复完整曲线；
+// 服务停止/卸载期间无采样数据，前端按断档断开显示，不跨无数据时段连线。
 func (c *Controller) loop() {
 	defer close(c.loopDone)
 	timer := time.NewTimer(0)
