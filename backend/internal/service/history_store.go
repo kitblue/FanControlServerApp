@@ -36,6 +36,9 @@ type HistoryStore struct {
 	mu              sync.Mutex
 	lastAppendTimes map[string]time.Time
 	lastPrune       time.Time
+
+	// dbPath 为数据库文件的展示路径（尽可能绝对化），供界面底部状态栏展示。
+	dbPath string
 }
 
 func NewHistoryStore(dbPath string) (*HistoryStore, error) {
@@ -69,7 +72,20 @@ CREATE INDEX IF NOT EXISTS idx_temp_history_ts ON temp_history(ts);
 	return &HistoryStore{
 		db:              db,
 		lastAppendTimes: map[string]time.Time{},
+		dbPath:          displayDBPath(dbPath),
 	}, nil
+}
+
+// displayDBPath 返回用于界面展示的数据库路径：尽可能转为绝对路径，内存库保持原值。
+func displayDBPath(dbPath string) string {
+	if dbPath == "" || dbPath == ":memory:" {
+		return dbPath
+	}
+	abs, err := filepath.Abs(dbPath)
+	if err != nil {
+		return dbPath
+	}
+	return abs
 }
 
 func (h *HistoryStore) Close() error {
