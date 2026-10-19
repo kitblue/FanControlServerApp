@@ -38,10 +38,30 @@ export const HISTORY_LINE_DEFAULTS = {
     smooth: true,
     symbol: "none",
     sampling: "lttb",
+    // 应用停止/卸载期间没有采集数据，历史曲线必须在该时段断开：null 点不连线
+    connectNulls: false,
     animation: false,
     emphasis: {focus: "series"},
     tooltip: {show: true},
 } as const;
+
+/**
+ * 断档检测基准：后端 historySampleInterval = 1 分钟（backend/internal/service/history_store.go），
+ * 连续缺失 3 个采样周期、且不少于 3 分钟，才判定为"无数据断档"。
+ * 单次采样轻微延迟（间隔 ≤ 2 个周期，即 1 分钟内抖动）不会断线，避免曲线破碎。
+ */
+export const HISTORY_SAMPLE_INTERVAL_MS = 60 * 1000;
+export const HISTORY_GAP_MIN_THRESHOLD_MS = 3 * HISTORY_SAMPLE_INTERVAL_MS;
+export const HISTORY_GAP_JITTER_TOLERANCE_MS = 60 * 1000;
+
+/** 断档阈值覆盖值（毫秒），0 表示按视图跨度自适应；可通过 setHistoryGapThresholdMs 调整。 */
+let historyGapThresholdOverrideMs = 0;
+
+/** 手动指定断档阈值（毫秒）；传 0 恢复自适应。下限为「采样周期 + 抖动容差」，避免曲线破碎。 */
+export function setHistoryGapThresholdMs(ms: number) {
+    const min = HISTORY_SAMPLE_INTERVAL_MS + HISTORY_GAP_JITTER_TOLERANCE_MS;
+    historyGapThresholdOverrideMs = Number.isFinite(ms) && ms > 0 ? Math.max(ms, min) : 0;
+}
 
 /** 风扇关联温度曲线专用色板：与转速色板（HISTORY_SERIES_COLORS）错开，便于温度栏内按风扇区分。 */
 export const HISTORY_FAN_TEMP_COLORS = [
@@ -269,7 +289,7 @@ export function historyTooltipFormatter(params: unknown): string {
             return `${dot}${it.seriesName}: ${formatHistoryTemp(val)}`;
         })
         .filter((line): line is string => line != null);
-    if (lines.length === 0) return head;
+    if (lines.length === 0) return "";
     return `${head}<br/>${lines.join("<br/>")}`;
 }
 
@@ -422,24 +442,81 @@ function lightenHex(hex: string, amount = 0.35): string {
     return `#${v.toString(16).padStart(6, "0")}`;
 }
 
-export function historyPointsToSeriesData(points: HistoryPoint[]): [number, number][] {
-    const out: [number, number][] = [];
-    for (const p of points) {
-        const v = historyPointValue(p);
-        if (v == null || !Number.isFinite(v)) continue;
-        out.push([new Date(p.time).getTime(), v]);
+/** 历史曲线数据点：时间为真实时间戳，值为 null 表示断档占位（不绘制、不连线）。 */
+export type HistorySeriesPoint = [number, number | null];
+
+/**
+ * 当前视图的采样粒度（毫秒），与后端 downsampleInterval 严格对齐：
+ * ≤6h → 1min；≤24h → 5min；≤7d → 15min；更长 → span/800（30min~1h 夹紧）。
+ */
+export function historySampleGranularityMs(hours = historySpanHours): number {
+    const span = Number.isFinite(hours) && hours > 0 ? hours : 1;
+    if (span <= 6) return HISTORY_SAMPLE_INTERVAL_MS;
+    if (span <= 24) return 5 * HISTORY_SAMPLE_INTERVAL_MS;
+    if (span <= 7 * 24) return 15 * HISTORY_SAMPLE_INTERVAL_MS;
+    const raw = (span * 3600000) / 800;
+    const min = 30 * HISTORY_SAMPLE_INTERVAL_MS;
+    const max = 60 * HISTORY_SAMPLE_INTERVAL_MS;
+    return Math.min(max, Math.max(min, Math.ceil(raw / HISTORY_SAMPLE_INTERVAL_MS) * HISTORY_SAMPLE_INTERVAL_MS));
+}
+
+/**
+ * 当前视图的断档阈值（毫秒）：连续缺失 3 个采样周期即视为无数据，且不少于 3 分钟。
+ * 1 分钟内的单次抖动（间隔 ≤ 2 个周期）不会触发断线。
+ */
+export function historyGapThresholdMs(hours = historySpanHours): number {
+    if (historyGapThresholdOverrideMs > 0) return historyGapThresholdOverrideMs;
+    return Math.max(3 * historySampleGranularityMs(hours), HISTORY_GAP_MIN_THRESHOLD_MS);
+}
+
+/** 相邻采样点时间差超阈值时插入 null 占位点，使该时段曲线断开（不补点、不拉直线）。 */
+function withHistoryGaps(items: [number, number][], threshold: number): HistorySeriesPoint[] {
+    if (items.length === 0) return [];
+    const sorted = items.length > 1 ? [...items].sort((a, b) => a[0] - b[0]) : items;
+    const out: HistorySeriesPoint[] = [];
+    let prevT: number | null = null;
+    for (const [t, v] of sorted) {
+        if (prevT != null && t - prevT > threshold) {
+            out.push([prevT + (t - prevT) / 2, null]);
+        }
+        out.push([t, v]);
+        prevT = t;
     }
     return out;
 }
 
-export function historyPWMPointsToPercentData(points: HistoryPoint[]): [number, number][] {
-    const out: [number, number][] = [];
+export function historySeriesHasGap(data: HistorySeriesPoint[]): boolean {
+    return data.some(p => p[1] == null);
+}
+
+export function historyPointsToSeriesData(
+    points: HistoryPoint[],
+    threshold = historyGapThresholdMs(),
+): HistorySeriesPoint[] {
+    const items: [number, number][] = [];
     for (const p of points) {
         const v = historyPointValue(p);
         if (v == null || !Number.isFinite(v)) continue;
-        out.push([new Date(p.time).getTime(), Math.min(100, Math.max(0, v / 255 * 100))]);
+        const t = new Date(p.time).getTime();
+        if (!Number.isFinite(t)) continue;
+        items.push([t, v]);
     }
-    return out;
+    return withHistoryGaps(items, threshold);
+}
+
+export function historyPWMPointsToPercentData(
+    points: HistoryPoint[],
+    threshold = historyGapThresholdMs(),
+): HistorySeriesPoint[] {
+    const items: [number, number][] = [];
+    for (const p of points) {
+        const v = historyPointValue(p);
+        if (v == null || !Number.isFinite(v)) continue;
+        const t = new Date(p.time).getTime();
+        if (!Number.isFinite(t)) continue;
+        items.push([t, Math.min(100, Math.max(0, v / 255 * 100))]);
+    }
+    return withHistoryGaps(items, threshold);
 }
 
 export function historyPointsStats(arr: HistoryPoint[] | undefined): {min: number; max: number} {
@@ -479,14 +556,18 @@ export function historyLineSeries(
     color: string,
     asPWMPercent = false,
 ): SeriesOption {
+    const threshold = historyGapThresholdMs();
+    const data = asPWMPercent
+        ? historyPWMPointsToPercentData(points ?? [], threshold)
+        : historyPointsToSeriesData(points ?? [], threshold);
     return {
         ...HISTORY_LINE_DEFAULTS,
         id,
         name,
-        data: asPWMPercent
-            ? historyPWMPointsToPercentData(points ?? [])
-            : historyPointsToSeriesData(points ?? []),
+        data,
         color,
+        // 存在断档时关闭 lttb 采样（sampling="none"），避免采样器跨过 null 占位点导致断档被"接上"
+        sampling: historySeriesHasGap(data) ? "none" : HISTORY_LINE_DEFAULTS.sampling,
         lineStyle: {color, width: 2},
     };
 }
@@ -541,7 +622,8 @@ export function updateHistoryChart() {
             const tpts = h.fans_temp?.[fan.id];
             if (!tpts?.length) continue;
             const tc = fanTempHistoryColor(fan.id);
-            const tdata = historyPointsToSeriesData(tpts);
+            const tdata = historyPointsToSeriesData(tpts, historyGapThresholdMs());
+            const tSampling = historySeriesHasGap(tdata) ? "none" : HISTORY_LINE_DEFAULTS.sampling;
             // 主曲线：自身颜色实线
             fanTempSeries.push({
                 ...HISTORY_LINE_DEFAULTS,
@@ -549,6 +631,7 @@ export function updateHistoryChart() {
                 name: `${fan.name || fan.id} 温度`,
                 data: tdata,
                 color: tc,
+                sampling: tSampling,
                 lineStyle: {color: tc, width: 2, type: "solid"},
                 yAxisIndex: 1,
             });
@@ -560,6 +643,7 @@ export function updateHistoryChart() {
                 name: "",
                 data: tdata,
                 color: lightenHex(tc),
+                sampling: tSampling,
                 lineStyle: {color: lightenHex(tc), width: 2, type: "dashed"},
                 yAxisIndex: 1,
                 silent: true,
@@ -593,10 +677,11 @@ function fanTempYAxisOption(fanTempSeries: SeriesOption[]): YAXisComponentOption
     let dataMax = -Infinity;
     for (const s of fanTempSeries) {
         if (typeof s.id !== "string" || !s.id.startsWith("fan_temp:")) continue;
-        for (const p of (s.data as [number, number][]) ?? []) {
-            if (Number.isFinite(p[1])) {
-                dataMin = Math.min(dataMin, p[1]);
-                dataMax = Math.max(dataMax, p[1]);
+        for (const p of (s.data as HistorySeriesPoint[]) ?? []) {
+            const v = p[1];
+            if (v != null && Number.isFinite(v)) {
+                dataMin = Math.min(dataMin, v);
+                dataMax = Math.max(dataMax, v);
             }
         }
     }
