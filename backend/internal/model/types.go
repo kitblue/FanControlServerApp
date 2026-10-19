@@ -86,6 +86,7 @@ type GlobalConfig struct {
 	HistoryFans      []string          `json:"history_fans"`             // 历史曲线风扇页选中的风扇 ID；null=未配置，[]=全不选
 	HistoryFrom      string            `json:"history_from,omitempty"`   // 自定义范围起始（datetime-local）
 	HistoryTo        string            `json:"history_to,omitempty"`     // 自定义范围结束（datetime-local）
+	ThemeMode        string            `json:"theme_mode,omitempty"`     // 界面主题：system（跟随系统）/ light（明亮）/ dark（暗黑）
 }
 
 const CurrentConfigVersion = 3
