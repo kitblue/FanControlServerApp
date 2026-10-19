@@ -25,6 +25,7 @@ import {connectWs} from "./ws";
 import {store} from "./store";
 import {initAuthMode, fetchInfo, fetchConfig, setGlobalConfig, checkUpdate} from "./api";
 import type {Telemetry, UpdateCheckResult} from "./types";
+import {initThemeSwitcher, applyThemeFromConfig, getThemeMode} from "./theme";
 
 function updateDiskSerialToggleIcon() {
     const btn = $("disk-serial-toggle");
@@ -68,6 +69,7 @@ async function refresh() {
     const [info, cfg] = await Promise.all([fetchInfo(), fetchConfig()]);
     store.setConfig(cfg);
     store.setTelemetry(info);
+    applyThemeFromConfig(cfg.global.theme_mode);
     fillGlobalForm();
     applyHistoryPrefsFromConfig();
     renderHistorySensorToggles();
@@ -169,6 +171,7 @@ async function main() {
     window.setInterval(updateSubtitleDate, 1000);
 
     await initAuthMode();
+    initThemeSwitcher();
     setupUpdateCheck();
 
     const refreshBtn = $("btn-refresh") as HTMLButtonElement;
@@ -203,6 +206,7 @@ async function main() {
 
         readSensorMgrIntoConfig();
         store.getConfig().global = readGlobalForm();
+        store.getConfig().global.theme_mode = getThemeMode();
         store.commitConfig();
         syncHistoryPrefsToConfig();
 
