@@ -82,6 +82,7 @@ func NewRouter(staticFS fs.FS, controller *service.Controller, store *config.Sto
 		apiRead.GET("/device/history", h.deviceHistory)
 		apiRead.GET("/device/scan", h.deviceScan)
 		apiRead.GET("/fan/config", h.fanConfig)
+		apiRead.GET("/system/storage", h.systemStorage)
 		apiRead.GET("/update/check", h.updateCheck)
 		apiRead.GET("/ws", h.ws)
 	}
@@ -177,6 +178,11 @@ func (h *handler) deviceScan(c *gin.Context) {
 
 func (h *handler) fanConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, h.store.Get())
+}
+
+// systemStorage 返回温度历史数据库文件占用（只读），供界面底部状态栏展示。
+func (h *handler) systemStorage(c *gin.Context) {
+	c.JSON(http.StatusOK, h.controller.StorageStats())
 }
 
 func (h *handler) saveFanConfig(c *gin.Context) {
