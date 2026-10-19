@@ -23,9 +23,41 @@ import {
 import {updateStopPWMRow, bindCollapsible, bindCPUGPUSensorMenus, bindFanEditDialogEvents, readSensorMgrIntoConfig, readGlobalForm, fillGlobalForm, updateGlobalTuningRowVisibility, renderSensorMgrTable, updateSensorMgrTemps} from "./ui/settings";
 import {connectWs} from "./ws";
 import {store} from "./store";
-import {initAuthMode, fetchInfo, fetchConfig, setGlobalConfig, checkUpdate} from "./api";
+import {initAuthMode, fetchInfo, fetchConfig, setGlobalConfig, checkUpdate, fetchStorageStats} from "./api";
 import type {Telemetry, UpdateCheckResult} from "./types";
 import {initThemeSwitcher, applyThemeFromConfig, getThemeMode} from "./theme";
+
+/** 底部状态栏刷新间隔：1 小时（不做高频轮询） */
+const STORAGE_STATUS_INTERVAL_MS = 3_600_000;
+
+/** 将字节数格式化为 MB（保留 1 位小数），无效值返回占位 */
+function formatDBSize(bytes: number): string {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "-- MB";
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/** 刷新底部状态栏中的数据库文件大小；失败或不可用时显示占位，不抛错 */
+async function refreshStorageStatus(): Promise<void> {
+    const el = document.getElementById("storage-status-text");
+    if (!el) return;
+    try {
+        const stats = await fetchStorageStats();
+        el.textContent = stats && stats.available
+            ? `数据库 ${formatDBSize(stats.size_bytes)}`
+            : "数据库 -- MB";
+        el.parentElement?.setAttribute("title", stats?.path ? `${stats.path}` : "温度历史数据库文件大小");
+    } catch {
+        el.textContent = "数据库 -- MB";
+    }
+}
+
+/** 初始化底部状态栏：加载时取一次，之后每小时更新一次 */
+function initStorageStatus(): void {
+    void refreshStorageStatus();
+    window.setInterval(() => {
+        void refreshStorageStatus();
+    }, STORAGE_STATUS_INTERVAL_MS);
+}
 
 function updateDiskSerialToggleIcon() {
     const btn = $("disk-serial-toggle");
@@ -237,6 +269,7 @@ async function main() {
     bindCollapsible("cpu-gpu-sensor-toggle", "cpu-gpu-sensor-panel", "cpu-gpu-sensor-chevron");
     bindCPUGPUSensorMenus();
     initHistoryChart();
+    initStorageStatus();
     updateDiskSerialToggleIcon();
     $("disk-serial-toggle").addEventListener("click", () => {
         setDiskSerialVisible(!showDiskSerial);
