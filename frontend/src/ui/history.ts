@@ -8,6 +8,7 @@ import {$, esc, toast} from "./core";
 import {getSensorDisplayName} from "./sources";
 import {fetchHistory, setGlobalConfig} from "../api";
 import {HistoryPoint, HistoryRange, HistorySeries} from "../types";
+import {getChartPalette, onThemeChanged} from "../theme";
 
 export const HISTORY_COLOR_CPU = "#38bdf8";
 export const HISTORY_COLOR_GPU = "#f97316";
@@ -58,29 +59,36 @@ export const HISTORY_CHART_GRID = {left: 8, right: 16, top: 16, bottom: 20, cont
 
 export const HISTORY_CHART_ANIM = {animation: false, animationDurationUpdate: 0};
 
-export const HISTORY_X_AXIS_BASE = {
-    type: "time" as const,
-    axisLine: {lineStyle: {color: "rgba(148,163,184,0.4)"}},
-    axisTick: {alignWithLabel: true},
-    axisLabel: {
-        showMinLabel: true,
-        showMaxLabel: true,
-        hideOverlap: false,
-        margin: 10,
-    },
-};
+export function historyXAxisBase() {
+    const p = getChartPalette();
+    return {
+        type: "time" as const,
+        axisLine: {lineStyle: {color: p.axis}},
+        axisTick: {alignWithLabel: true},
+        axisLabel: {
+            showMinLabel: true,
+            showMaxLabel: true,
+            hideOverlap: false,
+            margin: 10,
+            color: p.label,
+        },
+    };
+}
 
-export const HISTORY_Y_AXIS_BASE = {
-    type: "value" as const,
-    axisLine: {lineStyle: {color: "rgba(148,163,184,0.4)"}},
-    axisTick: {show: false},
-    splitLine: {
-        show: true,
-        showMinLine: false,
-        showMaxLine: false,
-        lineStyle: {color: "rgba(148,163,184,0.12)"},
-    },
-};
+export function historyYAxisBase() {
+    const p = getChartPalette();
+    return {
+        type: "value" as const,
+        axisLine: {lineStyle: {color: p.axis}},
+        axisTick: {show: false},
+        splitLine: {
+            show: true,
+            showMinLine: false,
+            showMaxLine: false,
+            lineStyle: {color: p.split},
+        },
+    };
+}
 
 let historyChart: echarts.ECharts | null = null;
 let historyChartResizeRaf = 0;
@@ -270,6 +278,9 @@ export function historyChartTooltip() {
         trigger: "axis" as const,
         formatter: historyTooltipFormatter,
         confine: true,
+        backgroundColor: "rgba(15,23,42,0.92)",
+        borderColor: "rgba(148,163,184,0.25)",
+        textStyle: {color: "#e2e8f0"},
         extraCssText: "z-index: 10000; pointer-events: none;",
     };
 }
@@ -482,12 +493,12 @@ export function historyLineSeries(
 
 export function historyChartXAxisOption() {
     return {
-        ...HISTORY_X_AXIS_BASE,
+        ...historyXAxisBase(),
         min: historyTimeMin,
         max: historyTimeMax,
         minInterval: historyXAxisMinInterval(),
         axisLabel: {
-            ...HISTORY_X_AXIS_BASE.axisLabel,
+            ...historyXAxisBase().axisLabel,
             formatter: historyAxisLabelFormatter,
         },
     };
@@ -514,10 +525,10 @@ export function updateHistoryChart() {
             series.push(historyLineSeries(`sensor:${s.id}`, getSensorDisplayName(s.id), pts, sensorHistoryColor(s.id)));
         }
         yAxis = {
-            ...HISTORY_Y_AXIS_BASE,
+            ...historyYAxisBase(),
             min: yMin,
             max: yMax,
-            axisLabel: {formatter: (v: number) => `${v.toFixed(0)}°`, margin: 8},
+            axisLabel: {formatter: (v: number) => `${v.toFixed(0)}°`, margin: 8, color: getChartPalette().label},
         };
     } else {
         const fanTempSeries: SeriesOption[] = [];
@@ -559,10 +570,10 @@ export function updateHistoryChart() {
         series.push(...fanTempSeries);
         yAxis = [
             {
-                ...HISTORY_Y_AXIS_BASE,
+                ...historyYAxisBase(),
                 min: 0,
                 max: 100,
-                axisLabel: {formatter: (v: number) => `${v.toFixed(0)}%`, margin: 8},
+                axisLabel: {formatter: (v: number) => `${v.toFixed(0)}%`, margin: 8, color: getChartPalette().label},
             },
             fanTempYAxisOption(fanTempSeries),
         ];
@@ -591,17 +602,17 @@ function fanTempYAxisOption(fanTempSeries: SeriesOption[]): YAXisComponentOption
     }
     if (!isFinite(dataMin) || !isFinite(dataMax)) {
         return {
-            ...HISTORY_Y_AXIS_BASE,
+            ...historyYAxisBase(),
             min: 0,
             max: 100,
-            axisLabel: {formatter: (v: number) => `${v.toFixed(0)}°`, margin: 8},
+            axisLabel: {formatter: (v: number) => `${v.toFixed(0)}°`, margin: 8, color: getChartPalette().label},
         };
     }
     return {
-        ...HISTORY_Y_AXIS_BASE,
+        ...historyYAxisBase(),
         min: Math.max(0, Math.floor((dataMin - 2) / 5) * 5),
         max: Math.ceil((dataMax + 2) / 5) * 5 + 5,
-        axisLabel: {formatter: (v: number) => `${v.toFixed(0)}°`, margin: 8},
+        axisLabel: {formatter: (v: number) => `${v.toFixed(0)}°`, margin: 8, color: getChartPalette().label},
     };
 }
 
@@ -878,23 +889,23 @@ export function initHistoryChart() {
     historyChart.setOption({
         ...HISTORY_CHART_ANIM,
         backgroundColor: "transparent",
-        textStyle: {color: "#cbd5e1"},
+        textStyle: {color: getChartPalette().label},
         legend: {show: false},
         tooltip: historyChartTooltip(),
         grid: HISTORY_CHART_GRID,
         xAxis: {
-            ...HISTORY_X_AXIS_BASE,
+            ...historyXAxisBase(),
             min: historyTimeMin || undefined,
             max: historyTimeMax || undefined,
             minInterval: historyXAxisMinInterval(),
             axisLabel: {
-                ...HISTORY_X_AXIS_BASE.axisLabel,
+                ...historyXAxisBase().axisLabel,
                 formatter: historyAxisLabelFormatter,
             },
         },
         yAxis: {
-            ...HISTORY_Y_AXIS_BASE,
-            axisLabel: {margin: 8},
+            ...historyYAxisBase(),
+            axisLabel: {margin: 8, color: getChartPalette().label},
         },
         series: [],
     });
@@ -903,4 +914,10 @@ export function initHistoryChart() {
     setupHistoryRangeControls();
     applyHistoryViewUI();
     renderHistoryLegend();
+    onThemeChanged(() => {
+        if (!historyChart) return;
+        historyChart.setOption({xAxis: historyChartXAxisOption()}, {silent: true});
+        updateHistoryChart();
+        renderHistoryLegend();
+    });
 }
