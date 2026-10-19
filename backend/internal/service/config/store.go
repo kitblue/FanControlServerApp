@@ -298,6 +298,9 @@ func NormalizeConfig(cfg *model.Config) {
 	if cfg.Global.SourceMode != "advanced" {
 		cfg.Global.SourceMode = "simple"
 	}
+	if cfg.Global.ThemeMode != "light" && cfg.Global.ThemeMode != "dark" {
+		cfg.Global.ThemeMode = "system"
+	}
 	if cfg.Global.SensorAliases == nil {
 		cfg.Global.SensorAliases = map[string]string{}
 	}
