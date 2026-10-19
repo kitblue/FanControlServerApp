@@ -181,6 +181,111 @@
             opacity: 0;
             transform: translateX(8px);
         }
+
+        /* ===== 明亮主题覆盖（data-theme="light"，暗色为默认主题） ===== */
+        [data-theme="light"] {
+            --scrollbar-track: #f1f5f9;
+            --scrollbar-thumb: #cbd5e1;
+            --scrollbar-thumb-hover: #94a3b8;
+        }
+
+        [data-theme="light"] body {
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+
+        [data-theme="light"] select option {
+            background-color: #ffffff;
+            color: #334155;
+        }
+
+        [data-theme="light"] select optgroup {
+            background-color: #f8fafc;
+            color: #0369a1;
+        }
+
+        [data-theme="light"] input[type="range"]::-webkit-slider-runnable-track {
+            background: #e2e8f0;
+        }
+
+        [data-theme="light"] svg circle[stroke="#1e293b"] {
+            stroke: #cbd5e1;
+        }
+
+        [data-theme="light"] .glass-card {
+            background: #ffffff;
+            border-color: rgba(148, 163, 184, 0.35);
+        }
+
+        [data-theme="light"] .glass-card:hover {
+            border-color: rgba(2, 132, 199, 0.4);
+        }
+
+        /* 背景 */
+        [data-theme="light"] .bg-slate-800 { background-color: #ffffff; }
+        [data-theme="light"] .bg-slate-800\/30 { background-color: #f8fafc; }
+        [data-theme="light"] .bg-slate-800\/40 { background-color: #ffffff; }
+        [data-theme="light"] .bg-slate-800\/60 { background-color: #e2e8f0; }
+        [data-theme="light"] .bg-slate-800\/80 { background-color: #e2e8f0; }
+        [data-theme="light"] .bg-slate-800\/95 { background-color: #f8fafc; }
+        [data-theme="light"] .bg-slate-900 { background-color: #ffffff; }
+        [data-theme="light"] .bg-slate-900\/40 { background-color: #ffffff; }
+        [data-theme="light"] .bg-slate-900\/95 { background-color: #ffffff; }
+        [data-theme="light"] .bg-slate-950\/50 { background-color: #f8fafc; }
+        [data-theme="light"] .bg-slate-700 { background-color: #e2e8f0; }
+        [data-theme="light"] .bg-slate-700\/50 { background-color: #e2e8f0; }
+        [data-theme="light"] .bg-slate-700\/60 { background-color: #e2e8f0; }
+        [data-theme="light"] .bg-slate-700\/80 { background-color: #e2e8f0; }
+        [data-theme="light"] .bg-slate-600 { background-color: #cbd5e1; }
+        [data-theme="light"] .bg-emerald-900 { background-color: #d1fae5; }
+        [data-theme="light"] .bg-amber-900 { background-color: #fef3c7; }
+        [data-theme="light"] .bg-red-900 { background-color: #fee2e2; }
+        [data-theme="light"] .hover\:bg-slate-600:hover { background-color: #cbd5e1; }
+        [data-theme="light"] .hover\:bg-slate-700:hover { background-color: #cbd5e1; }
+        [data-theme="light"] .hover\:bg-slate-700\/50:hover { background-color: #e2e8f0; }
+        [data-theme="light"] .hover\:bg-slate-700\/80:hover { background-color: #e2e8f0; }
+        [data-theme="light"] .hover\:bg-slate-800:hover { background-color: #e2e8f0; }
+        [data-theme="light"] .hover\:bg-slate-800\/80:hover { background-color: #e2e8f0; }
+        [data-theme="light"] .hover\:bg-slate-800\/90:hover { background-color: #e2e8f0; }
+
+        /* 文字 */
+        [data-theme="light"] .text-white { color: #1e293b; }
+        [data-theme="light"] .bg-sky-600.text-white,
+        [data-theme="light"] .bg-sky-500.text-white,
+        [data-theme="light"] .bg-gradient-to-r.text-white {
+            color: #ffffff;
+        }
+        [data-theme="light"] .text-slate-100 { color: #1e293b; }
+        [data-theme="light"] .text-slate-200 { color: #334155; }
+        [data-theme="light"] .text-slate-300 { color: #475569; }
+        [data-theme="light"] .text-slate-400 { color: #64748b; }
+        [data-theme="light"] .text-slate-500 { color: #64748b; }
+        [data-theme="light"] .text-slate-600 { color: #94a3b8; }
+        [data-theme="light"] .text-sky-400 { color: #0284c7; }
+        [data-theme="light"] .text-sky-300 { color: #0369a1; }
+        [data-theme="light"] .text-emerald-400 { color: #059669; }
+        [data-theme="light"] .text-orange-400 { color: #ea580c; }
+        [data-theme="light"] .text-amber-400 { color: #b45309; }
+        [data-theme="light"] .text-red-100 { color: #b91c1c; }
+        [data-theme="light"] .text-red-200 { color: #b91c1c; }
+        [data-theme="light"] .text-red-300 { color: #dc2626; }
+        [data-theme="light"] .text-emerald-100 { color: #065f46; }
+        [data-theme="light"] .text-amber-100 { color: #92400e; }
+        [data-theme="light"] .hover\:text-white:hover { color: #0f172a; }
+        [data-theme="light"] .hover\:text-sky-300:hover { color: #0369a1; }
+
+        /* 边框 */
+        [data-theme="light"] .border-slate-500 { border-color: #94a3b8; }
+        [data-theme="light"] .border-slate-600 { border-color: #cbd5e1; }
+        [data-theme="light"] .border-slate-700 { border-color: #e2e8f0; }
+        [data-theme="light"] .border-slate-700\/30 { border-color: rgba(226, 232, 240, 0.8); }
+        [data-theme="light"] .border-slate-700\/50 { border-color: #e2e8f0; }
+        [data-theme="light"] .border-slate-700\/80 { border-color: #cbd5e1; }
+        [data-theme="light"] .border-slate-800 { border-color: #e2e8f0; }
+        [data-theme="light"] .border-sky-500\/20 { border-color: rgba(2, 132, 199, 0.25); }
+        [data-theme="light"] .border-sky-500\/50 { border-color: rgba(2, 132, 199, 0.4); }
+        [data-theme="light"] .hover\:border-slate-500:hover { border-color: #94a3b8; }
+        [data-theme="light"] .hover\:border-sky-400:hover { border-color: #0284c7; }
     </style>
 </head>
 <body class="p-4 md:p-6 max-w-[1720px] mx-auto">
@@ -225,6 +330,24 @@
         <button type="button" id="btn-check-update" class="h-9 px-4 text-sm rounded-lg bg-slate-700/60 border border-slate-600 text-slate-300 hover:bg-slate-600 hover:border-slate-500 transition-colors inline-flex items-center gap-1.5">
             检查更新
         </button>
+
+        <div id="theme-switcher" class="inline-flex items-center rounded-lg border border-slate-700 bg-slate-800/60 p-0.5 text-sm" title="主题">
+            <button type="button" data-theme-mode="system"
+                    class="h-7 px-2.5 text-sm rounded-md transition-colors inline-flex items-center gap-1 text-slate-400 hover:text-white"
+                    title="跟随系统">
+                <iconify-icon icon="mdi:theme-light-dark" class="text-base"></iconify-icon>
+            </button>
+            <button type="button" data-theme-mode="light"
+                    class="h-7 px-2.5 text-sm rounded-md transition-colors inline-flex items-center gap-1 text-slate-400 hover:text-white"
+                    title="明亮">
+                <iconify-icon icon="mdi:white-balance-sunny" class="text-base"></iconify-icon>
+            </button>
+            <button type="button" data-theme-mode="dark"
+                    class="h-7 px-2.5 text-sm rounded-md transition-colors inline-flex items-center gap-1 text-slate-400 hover:text-white"
+                    title="暗黑">
+                <iconify-icon icon="mdi:weather-night" class="text-base"></iconify-icon>
+            </button>
+        </div>
 
         <button type="button" id="btn-update-available" class="h-9 px-4 text-sm rounded-lg bg-sky-500 hover:bg-sky-400 text-white transition-colors inline-flex items-center gap-1.5 hidden">
             发现新版本
