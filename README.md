@@ -2,7 +2,7 @@
 
 ![logo](ICON.PNG)
 
-**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控。与官方版最大区别是**内置 qnap8528 驱动**（IT8528 EC 机型自动编译加载，支持风扇/温度/LED/按键/VPD），覆盖更多机型的风扇控制。轻量化与并发安全重构后始终全量采集落库（singleflight 合并、SQLite WAL），历史曲线连续可靠，内置 Prometheus /metrics 可观测。
+**Fan Control Server（定制版）** 基于开源 [FanControlServer](https://github.com/guan-ry/FanControlServerApp) 二次开发，专为飞牛 OS（fnOS）及 x86 主板设计：智能温控曲线、多风扇管理、实时硬件监控。本定制版内置 qnap8528 内核驱动，安装时自动编译加载，为 IT8528 EC 机型提供完整的风扇控制支持，弥补系统内置驱动对专有 EC 芯片的覆盖不足。轻量化与并发安全重构后始终全量采集落库（singleflight 合并、SQLite WAL），历史曲线按真实采样断档展示（应用停止或卸载期间无数据的时段自动断开、不跨断档连线），内置 Prometheus /metrics 可观测。
 
 适配飞牛 OS 应用中心，仓库自带 FnDepot V2 索引（fnpack.json），可直接作为第三方应用源添加，在商店中一键安装。
 
