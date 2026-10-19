@@ -6,6 +6,7 @@ import {echarts} from "../echarts-setup";
 import type {EChartsOption} from "../echarts-setup";
 import {$, toast} from "./core";
 import {CurvePoint} from "../types";
+import {getChartPalette, onThemeChanged} from "../theme";
 
 export const CURVE_POINT_HIT_PX = 28;
 
@@ -185,6 +186,7 @@ export function initFanCurveChartShell() {
     if (fanCurveChart) return;
     const chartDom = $("fan-curve-editor");
     fanCurveChart = echarts.init(chartDom);
+    const p = getChartPalette();
     const option: EChartsOption = {
         backgroundColor: "transparent",
         tooltip: {
@@ -199,23 +201,23 @@ export function initFanCurveChartShell() {
             min: 30,
             max: 80,
             type: "value",
-            axisLine: {lineStyle: {color: "#334155"}},
-            splitLine: {lineStyle: {color: "rgba(51, 65, 85, 0.3)", type: "dashed"}},
+            axisLine: {lineStyle: {color: p.axis}},
+            splitLine: {lineStyle: {color: p.split, type: "dashed"}},
             name: "温度 (°C)",
             nameLocation: "middle",
             nameGap: 35,
-            nameTextStyle: {color: "#64748b", fontSize: 12}
+            nameTextStyle: {color: p.name, fontSize: 12}
         },
         yAxis: {
             min: 0,
             max: 255,
             type: "value",
-            axisLine: {lineStyle: {color: "#334155"}},
-            splitLine: {lineStyle: {color: "rgba(51, 65, 85, 0.3)", type: "dashed"}},
+            axisLine: {lineStyle: {color: p.axis}},
+            splitLine: {lineStyle: {color: p.split, type: "dashed"}},
             name: "PWM 值",
             nameLocation: "middle",
             nameGap: 45,
-            nameTextStyle: {color: "#64748b", fontSize: 12}
+            nameTextStyle: {color: p.name, fontSize: 12}
         },
         series: [
             {
@@ -237,6 +239,22 @@ export function initFanCurveChartShell() {
     };
     fanCurveChart.setOption(option);
     updateFanCurveGraphic();
+    onThemeChanged(() => {
+        if (!fanCurveChart) return;
+        const cp = getChartPalette();
+        fanCurveChart.setOption({
+            xAxis: {
+                axisLine: {lineStyle: {color: cp.axis}},
+                splitLine: {lineStyle: {color: cp.split, type: "dashed"}},
+                nameTextStyle: {color: cp.name, fontSize: 12}
+            },
+            yAxis: {
+                axisLine: {lineStyle: {color: cp.axis}},
+                splitLine: {lineStyle: {color: cp.split, type: "dashed"}},
+                nameTextStyle: {color: cp.name, fontSize: 12}
+            }
+        }, {silent: true});
+    });
     if (!fanCurveChartBound) {
         fanCurveChartBound = true;
         window.addEventListener("resize", () => {
